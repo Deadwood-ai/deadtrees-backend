@@ -19,6 +19,10 @@ const defaultNavigation = [
     label: "Satellite Map",
   },
   {
+    key: "/priwa",
+    label: "PRIWA",
+  },
+  {
     key: "/dataset",
     label: "Drone Archive",
   },
