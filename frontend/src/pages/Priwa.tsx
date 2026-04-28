@@ -8,9 +8,15 @@ import {
   Segmented,
   Slider,
   Skeleton,
+  Tag,
   Tooltip,
 } from "antd";
-import { AimOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import {
+  AimOutlined,
+  CheckCircleOutlined,
+  CloudSyncOutlined,
+  InfoCircleOutlined,
+} from "@ant-design/icons";
 import type { Geometry as GeoJsonGeometry } from "geojson";
 import Feature from "ol/Feature";
 import type { FeatureLike } from "ol/Feature";
@@ -20,6 +26,7 @@ import { createEmpty, extend } from "ol/extent";
 import Map from "ol/Map";
 import View from "ol/View";
 import { defaults as defaultInteractions } from "ol/interaction";
+import Draw, { DrawEvent } from "ol/interaction/Draw";
 import TileLayerWebGL from "ol/layer/WebGLTile.js";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
@@ -37,7 +44,6 @@ import { supabase } from "../hooks/useSupabase";
 import { Settings } from "../config";
 import {
   createOpenFreeMapLibertyLayerGroup,
-  createStandardMapControls,
   createWaybackSource,
   createWaybackTileLayer,
 } from "../utils/basemaps";
@@ -54,6 +60,7 @@ type PreviewLayerKey =
 
 type LayerVisibility = Record<PreviewLayerKey, boolean>;
 type PriwaMapStyle = "streets-v12" | "satellite-streets-v12";
+type PriwaReleaseStatus = "in_review" | "accepted";
 
 type PreviewRow = {
   id: string | number;
@@ -114,6 +121,8 @@ type OrthoRow = {
   aquisition_month?: string | number | null;
   aquisition_day?: string | number | null;
   geometry: GeoJsonGeometry | null;
+  control_area_id?: string | null;
+  preview_role?: "single" | "previous" | "current";
 };
 
 type PriwaData = {
@@ -147,8 +156,8 @@ const geoJsonFormat = new GeoJSON();
 const DEFAULT_WAYBACK_RELEASE = 31144;
 
 const basemapOptions = [
-  { value: "streets-v12", label: "Streets" },
-  { value: "satellite-streets-v12", label: "Imagery" },
+  { value: "streets-v12", label: "Karte" },
+  { value: "satellite-streets-v12", label: "Luftbild" },
 ];
 
 const layerVisuals: Record<
@@ -156,12 +165,12 @@ const layerVisuals: Record<
   { label: string; color: string; countLabel: string }
 > = {
   controlAreas: {
-    label: "Kontrollflaechen",
+    label: "Kontrollflächen",
     color: mapColors.aoi.stroke,
     countLabel: "areas",
   },
   observations: {
-    label: "Kaeferbaeume",
+    label: "Käferbäume",
     color: mapColors.deadwood.fill,
     countLabel: "trees",
   },
@@ -176,12 +185,12 @@ const layerVisuals: Record<
     countLabel: "hints",
   },
   paths: {
-    label: "Wege context",
+    label: "Wege",
     color: palette.neutral[500],
     countLabel: "paths",
   },
   orthos: {
-    label: "PRIMA orthos",
+    label: "Orthos",
     color: palette.primary[600],
     countLabel: "cogs",
   },
@@ -275,10 +284,19 @@ const orthoFootprintStyle = new Style({
   stroke: new Stroke({ color: palette.primary[600], width: 1.8 }),
 });
 
-const droneHintStyle = new Style({
-  fill: new Fill({ color: "rgba(37, 99, 235, 0)" }),
-  stroke: new Stroke({ color: "#2563eb", width: 3 }),
-});
+const droneHintStyle = (feature: FeatureLike) => {
+  const selected = Boolean(feature.get("selected"));
+
+  return new Style({
+    fill: new Fill({
+      color: selected ? "rgba(37, 99, 235, 0.12)" : "rgba(37, 99, 235, 0)",
+    }),
+    stroke: new Stroke({
+      color: selected ? "#1d4ed8" : "#2563eb",
+      width: selected ? 4 : 3,
+    }),
+  });
+};
 
 const isMissingTableError = (message: string) =>
   message.includes("does not exist") ||
@@ -287,7 +305,15 @@ const isMissingTableError = (message: string) =>
 const PREVIEW_PAGE_SIZE = 1000;
 const PREVIEW_MAX_ROWS = 20000;
 const ORTHO_RASTER_LIMIT = 12;
-const PRIWA_PREVIEW_DATASET_ID = 6003;
+const ORTHO_RASTER_OPACITY = 0.88;
+const DEADWOOD_PREDICTION_OPACITY = 0.88;
+const SWIPE_CSS_VAR = "--priwa-swipe-position";
+const PRIWA_PREVIEW_DATASET_IDS = [6003, 8298, 9672] as const;
+const PRIWA_COMPARE_CONTROL_AREA_ID = "26d9d2d0-8298-4672-8000-000000000002";
+const PRIWA_COMPARE_DATASET_IDS = {
+  previous: 8298,
+  current: 9672,
+} as const;
 
 const parseBBox = (value: string | null) => {
   if (!value) return null;
@@ -317,22 +343,6 @@ const bboxToGeometry = (
   };
 };
 
-const createFocusControlArea = (row: Omit<OrthoRow, "geometry">) => {
-  const geometry = bboxToGeometry(parseBBox(row.bbox));
-  if (!geometry) {
-    throw new Error(`Dataset ${PRIWA_PREVIEW_DATASET_ID} has no usable bbox`);
-  }
-
-  return {
-    id: `deadtrees-dataset-${row.id}`,
-    name: `Dataset ${row.id} Ruliskopf`,
-    slug: row.file_name ?? `dataset-${row.id}`,
-    status: "active",
-    qfieldcloud_project_name: row.file_name,
-    geometry,
-  } satisfies ControlAreaRow;
-};
-
 const intersectsControlArea = <TRow extends PreviewRow>(
   row: TRow,
   controlArea: ControlAreaRow,
@@ -353,60 +363,125 @@ const intersectsControlArea = <TRow extends PreviewRow>(
   );
 };
 
-const fetchPreviewDatasetOrtho = async () => {
+const sortControlAreas = (areas: ControlAreaRow[]) =>
+  [...areas].sort((left, right) => {
+    if (left.id === PRIWA_COMPARE_CONTROL_AREA_ID) return -1;
+    if (right.id === PRIWA_COMPARE_CONTROL_AREA_ID) return 1;
+    return left.name.localeCompare(right.name, "de");
+  });
+
+const getOrthoDate = (row: OrthoRow | null | undefined) => {
+  if (!row) return "nicht verfügbar";
+  const year = Number(row.aquisition_year);
+  const month = Number(row.aquisition_month);
+  const day = Number(row.aquisition_day);
+  if (!year || !month || !day) return `Dataset ${row.id}`;
+
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+};
+
+const getFlightName = (row: OrthoRow | null | undefined) =>
+  row ? `Befliegung ${getOrthoDate(row)}` : "Befliegung nicht verfügbar";
+
+const compactOrthos = (rows: Array<OrthoRow | null | undefined>): OrthoRow[] =>
+  rows.filter((row): row is OrthoRow => !!row);
+
+const getSwipeClip = (position: number) => `inset(0 0 0 ${position}%)`;
+
+const applySwipePosition = (
+  map: Map,
+  isCompareMode: boolean,
+  swipePosition: number,
+) => {
+  const viewport = map.getViewport();
+  viewport.style.setProperty(SWIPE_CSS_VAR, `${swipePosition}%`);
+  viewport.classList.toggle("priwa-swipe-enabled", isCompareMode);
+
+  viewport
+    .querySelectorAll<HTMLElement>(".priwa-swipe-current")
+    .forEach((element) => {
+      element.style.clipPath = isCompareMode ? getSwipeClip(swipePosition) : "";
+      element.style.webkitClipPath = element.style.clipPath;
+    });
+};
+
+const assignOrthoControlArea = (
+  ortho: OrthoRow,
+  controlAreas: ControlAreaRow[],
+) => {
+  const matchingArea = controlAreas.find((area) =>
+    intersectsControlArea(ortho, area),
+  );
+
+  return {
+    ...ortho,
+    control_area_id: matchingArea?.id ?? null,
+    preview_role:
+      ortho.id === PRIWA_COMPARE_DATASET_IDS.previous
+        ? "previous"
+        : ortho.id === PRIWA_COMPARE_DATASET_IDS.current
+          ? "current"
+          : "single",
+  } satisfies OrthoRow;
+};
+
+const fetchPreviewDatasetOrthos = async (controlAreas: ControlAreaRow[]) => {
   const { data, error } = await supabase
     .from(Settings.DATA_TABLE_FULL)
     .select(
       "id,file_name,project_id,user_id,bbox,cog_path,cog_file_size,aquisition_year,aquisition_month,aquisition_day,is_cog_done",
     )
-    .eq("id", PRIWA_PREVIEW_DATASET_ID)
+    .in("id", [...PRIWA_PREVIEW_DATASET_IDS])
     .eq("is_cog_done", true)
     .not("bbox", "is", null)
-    .not("cog_path", "is", null)
-    .maybeSingle();
+    .not("cog_path", "is", null);
 
   if (error) {
     throw error;
   }
-  if (!data) {
-    throw new Error(`Dataset ${PRIWA_PREVIEW_DATASET_ID} is not available`);
+  if (!data?.length) {
+    throw new Error("Keine PRIWA-Orthos in deadtrees gefunden");
   }
 
-  const row = data as Omit<OrthoRow, "geometry">;
-  return {
-    ortho: {
+  return (data as Omit<OrthoRow, "geometry">[])
+    .map((row) => ({
       ...row,
       geometry: bboxToGeometry(parseBBox(row.bbox)),
-    } satisfies OrthoRow,
-    controlArea: createFocusControlArea(row),
-  };
+    }))
+    .filter((row): row is OrthoRow => !!row.geometry)
+    .map((row) => assignOrthoControlArea(row, controlAreas));
 };
 
-const fetchDeadwoodPredictionLabelId = async () => {
+const fetchDeadwoodPredictionLabelIds = async () => {
   const { data, error } = await supabase
     .from(Settings.LABELS_TABLE)
-    .select("id")
-    .eq("dataset_id", PRIWA_PREVIEW_DATASET_ID)
+    .select("id,dataset_id")
+    .in("dataset_id", [...PRIWA_PREVIEW_DATASET_IDS])
     .eq("label_data", "deadwood")
     .eq("label_source", "model_prediction")
-    .eq("is_active", true)
-    .maybeSingle();
+    .eq("is_active", true);
 
   if (error) {
     throw error;
   }
 
-  return data?.id ?? null;
+  return Object.fromEntries(
+    (data ?? []).map((row) => [Number(row.dataset_id), Number(row.id)]),
+  ) as Record<number, number>;
 };
 
-async function fetchPriwaData(focusControlArea: ControlAreaRow): Promise<{
+async function fetchPriwaData(): Promise<{
   data: PriwaData;
   warnings: string[];
 }> {
   const client = priwaSupabase;
   if (!client) {
     throw new Error(
-      "PRIWA Supabase is not configured. Set VITE_PRIWA_SUPABASE_URL and VITE_PRIWA_SUPABASE_ANON_KEY.",
+      "PRIWA Supabase ist nicht konfiguriert. VITE_PRIWA_SUPABASE_URL und VITE_PRIWA_SUPABASE_ANON_KEY fehlen.",
     );
   }
 
@@ -444,22 +519,25 @@ async function fetchPriwaData(focusControlArea: ControlAreaRow): Promise<{
   };
 
   const warnings: string[] = [];
-  const [observations, warningPolygons, droneHints, paths] = await Promise.all([
-    fetchPreviewRows<ObservationRow>("priwa_preview_observations"),
-    fetchPreviewRows<WarningPolygonRow>("priwa_preview_warning_polygons"),
-    fetchPreviewRows<DroneHintRow>("priwa_preview_drone_hints"),
-    fetchPreviewRows<PathRow>("priwa_preview_paths"),
-  ]);
+  const [controlAreas, observations, warningPolygons, droneHints, paths] =
+    await Promise.all([
+      fetchPreviewRows<ControlAreaRow>("priwa_preview_control_areas"),
+      fetchPreviewRows<ObservationRow>("priwa_preview_observations"),
+      fetchPreviewRows<WarningPolygonRow>("priwa_preview_warning_polygons"),
+      fetchPreviewRows<DroneHintRow>("priwa_preview_drone_hints"),
+      fetchPreviewRows<PathRow>("priwa_preview_paths"),
+    ]);
 
   for (const [label, response] of [
-    ["Kaeferbaeume", observations],
+    ["Kontrollflächen", controlAreas],
+    ["Käferbäume", observations],
     ["Warnkarte", warningPolygons],
     ["Drohnenhinweise", droneHints],
     ["Wege", paths],
   ] as const) {
     if (response.error) {
       if (isMissingTableError(response.error.message)) {
-        warnings.push(`${label}: preview view not available yet`);
+        warnings.push(`${label}: Preview-View ist noch nicht verfügbar`);
         continue;
       }
 
@@ -469,19 +547,13 @@ async function fetchPriwaData(focusControlArea: ControlAreaRow): Promise<{
 
   return {
     data: {
-      controlAreas: [focusControlArea],
-      observations: ((observations.data ?? []) as ObservationRow[]).filter(
-        (row) => intersectsControlArea(row, focusControlArea),
+      controlAreas: sortControlAreas(
+        (controlAreas.data ?? []) as ControlAreaRow[],
       ),
-      warningPolygons: (
-        (warningPolygons.data ?? []) as WarningPolygonRow[]
-      ).filter((row) => intersectsControlArea(row, focusControlArea)),
-      droneHints: ((droneHints.data ?? []) as DroneHintRow[]).filter((row) =>
-        intersectsControlArea(row, focusControlArea),
-      ),
-      paths: ((paths.data ?? []) as PathRow[]).filter((row) =>
-        intersectsControlArea(row, focusControlArea),
-      ),
+      observations: (observations.data ?? []) as ObservationRow[],
+      warningPolygons: (warningPolygons.data ?? []) as WarningPolygonRow[],
+      droneHints: (droneHints.data ?? []) as DroneHintRow[],
+      paths: (paths.data ?? []) as PathRow[],
       orthos: [],
     },
     warnings,
@@ -538,11 +610,12 @@ const Priwa = () => {
     typeof createWaybackTileLayer
   > | null>(null);
   const orthoRasterLayerRefs = useRef<TileLayerWebGL[]>([]);
+  const drawHintInteractionRef = useRef<Draw | null>(null);
   const deadwoodPredictionLayerRef = useRef<ReturnType<
     typeof createDeadwoodVectorLayer
   > | null>(null);
   const deadwoodPredictionVisibleRef = useRef(true);
-  const layerOpacityRef = useRef(0.88);
+  const swipePositionRef = useRef(50);
   const layerRefs = useRef<
     Record<PreviewLayerKey, VectorLayer<VectorSource<Feature<Geometry>>> | null>
   >({
@@ -559,14 +632,23 @@ const Priwa = () => {
     useState<LayerVisibility>(initialVisibility);
   const [deadwoodPredictionVisible, setDeadwoodPredictionVisible] =
     useState(true);
-  const [deadwoodPredictionLabelId, setDeadwoodPredictionLabelId] = useState<
-    number | null
-  >(null);
+  const [deadwoodPredictionLabelIds, setDeadwoodPredictionLabelIds] = useState<
+    Record<number, number>
+  >({});
   const [mapStyle, setMapStyle] = useState<PriwaMapStyle>("streets-v12");
-  const [layerOpacity, setLayerOpacity] = useState(0.88);
+  const [releaseStatus, setReleaseStatus] =
+    useState<PriwaReleaseStatus>("in_review");
+  const [swipePosition, setSwipePosition] = useState(50);
   const [selectedControlAreaId, setSelectedControlAreaId] = useState<
     string | null
   >(null);
+  const [selectedDroneHintId, setSelectedDroneHintId] = useState<string | null>(
+    null,
+  );
+  const [editingDroneHintId, setEditingDroneHintId] = useState<string | null>(
+    null,
+  );
+  const [isDrawingHint, setIsDrawingHint] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -578,6 +660,63 @@ const Priwa = () => {
       null,
     [data.controlAreas, selectedControlAreaId],
   );
+
+  const visibleData = useMemo(() => {
+    if (!selectedControlArea) return initialData;
+
+    return {
+      controlAreas: [selectedControlArea],
+      observations: data.observations.filter((row) =>
+        intersectsControlArea(row, selectedControlArea),
+      ),
+      warningPolygons: data.warningPolygons.filter((row) =>
+        intersectsControlArea(row, selectedControlArea),
+      ),
+      droneHints: data.droneHints.filter(
+        (row) =>
+          row.control_area_id === selectedControlArea.id ||
+          intersectsControlArea(row, selectedControlArea),
+      ),
+      paths: data.paths.filter((row) =>
+        intersectsControlArea(row, selectedControlArea),
+      ),
+      orthos: data.orthos.filter(
+        (row) => row.control_area_id === selectedControlArea.id,
+      ),
+    } satisfies PriwaData;
+  }, [data, selectedControlArea]);
+
+  const previousOrtho = useMemo(
+    () =>
+      visibleData.orthos.find((row) => row.preview_role === "previous") ?? null,
+    [visibleData.orthos],
+  );
+  const currentOrtho = useMemo(
+    () =>
+      visibleData.orthos.find((row) => row.preview_role === "current") ??
+      visibleData.orthos.find((row) => row.preview_role === "single") ??
+      visibleData.orthos[0] ??
+      null,
+    [visibleData.orthos],
+  );
+  const isCompareAvailable = !!previousOrtho && !!currentOrtho;
+  const isCompareMode = isCompareAvailable;
+  const renderedOrthos = useMemo(() => {
+    if (isCompareMode) return compactOrthos([previousOrtho, currentOrtho]);
+    return compactOrthos([currentOrtho ?? previousOrtho]);
+  }, [currentOrtho, isCompareMode, previousOrtho]);
+  const selectedPredictionLabelId = currentOrtho
+    ? (deadwoodPredictionLabelIds[currentOrtho.id] ?? null)
+    : null;
+
+  const qfieldProjectName =
+    selectedControlArea?.qfieldcloud_project_name ?? "kein QFieldCloud-Projekt";
+  const currentFlightName = getFlightName(currentOrtho);
+  const previousFlightName = getFlightName(previousOrtho);
+  const fieldPackageStatus =
+    releaseStatus === "accepted"
+      ? "wartet auf Prozessor"
+      : "wartet auf Freigabe";
 
   const fitToLiveData = useCallback(() => {
     const map = mapRef.current;
@@ -596,11 +735,173 @@ const Priwa = () => {
     if (!hasExtent) return;
 
     map.getView().fit(extent, {
-      padding: [96, 360, 96, 96],
+      padding: [96, 336, 112, 304],
       maxZoom: 16,
       duration: 400,
     });
   }, []);
+
+  const fitControlArea = useCallback((area: ControlAreaRow | null) => {
+    const map = mapRef.current;
+    if (!map || !area?.geometry) return;
+
+    const feature = geoJsonFormat.readFeature(
+      {
+        type: "Feature",
+        geometry: area.geometry,
+        properties: {},
+      },
+      { dataProjection: "EPSG:4326", featureProjection: "EPSG:3857" },
+    ) as Feature<Geometry>;
+    const geometry = feature.getGeometry();
+    if (!geometry) return;
+
+    map.getView().fit(geometry.getExtent(), {
+      padding: [96, 336, 112, 304],
+      maxZoom: 16,
+      duration: 400,
+    });
+  }, []);
+
+  const focusDroneHint = useCallback((hint: DroneHintRow) => {
+    setSelectedDroneHintId(String(hint.id));
+
+    const map = mapRef.current;
+    const source = layerRefs.current.droneHints?.getSource();
+    const feature = source?.getFeatureById(hint.id);
+    if (!map || !feature) return;
+    const geometry = feature.getGeometry();
+    if (!geometry) return;
+
+    map.getView().fit(geometry.getExtent(), {
+      padding: [160, 360, 160, 304],
+      maxZoom: 18,
+      duration: 300,
+    });
+  }, []);
+
+  const stopDrawingHint = useCallback(() => {
+    const map = mapRef.current;
+    if (map && drawHintInteractionRef.current) {
+      map.removeInteraction(drawHintInteractionRef.current);
+    }
+    drawHintInteractionRef.current = null;
+    setIsDrawingHint(false);
+    setEditingDroneHintId(null);
+  }, []);
+
+  const startDrawingHint = useCallback(
+    (hintToEdit?: DroneHintRow) => {
+      const map = mapRef.current;
+      const source = layerRefs.current.droneHints?.getSource();
+      if (!map || !source || !selectedControlArea) return;
+
+      stopDrawingHint();
+      setVisibility((current) => ({ ...current, droneHints: true }));
+
+      const targetHintId = hintToEdit ? String(hintToEdit.id) : null;
+      if (targetHintId) {
+        setSelectedDroneHintId(targetHintId);
+      }
+      setEditingDroneHintId(targetHintId);
+
+      const draw = new Draw({
+        source,
+        type: "Polygon",
+      });
+
+      draw.on("drawend", (event: DrawEvent) => {
+        const geometry = event.feature.getGeometry();
+        if (!geometry) {
+          stopDrawingHint();
+          return;
+        }
+
+        const hintId = targetHintId ?? `local-drone-hint-${Date.now()}`;
+        const nextFeatureId =
+          hintToEdit?.source_feature_id ??
+          Math.max(
+            0,
+            ...visibleData.droneHints.map((hint) =>
+              Number(hint.source_feature_id ?? 0),
+            ),
+          ) + 1;
+        const geoJsonGeometry = geoJsonFormat.writeGeometryObject(geometry, {
+          dataProjection: "EPSG:4326",
+          featureProjection: "EPSG:3857",
+        }) as GeoJsonGeometry;
+        const rawAttributes = {
+          ...(hintToEdit?.raw_attributes ?? {}),
+          preview_local: true,
+          preview_updated: Boolean(targetHintId),
+          status: "offen",
+          text: targetHintId
+            ? "Aktualisierter Drohnenhinweis"
+            : "Neu gezeichneter Drohnenhinweis",
+        };
+
+        const existingFeature = targetHintId
+          ? source.getFeatureById(targetHintId)
+          : null;
+        if (existingFeature && existingFeature !== event.feature) {
+          source.removeFeature(existingFeature);
+        }
+
+        event.feature.setId(hintId);
+        event.feature.setProperties({
+          id: hintId,
+          control_area_id: selectedControlArea.id,
+          source_feature_id: nextFeatureId,
+          raw_attributes: rawAttributes,
+          layerName: "droneHints",
+          selected: true,
+        });
+
+        const nextHint: DroneHintRow = {
+          id: hintId,
+          control_area_id: selectedControlArea.id,
+          geometry: geoJsonGeometry,
+          source_feature_id: nextFeatureId,
+          raw_attributes: rawAttributes,
+        };
+
+        setData((current) => ({
+          ...current,
+          droneHints: targetHintId
+            ? current.droneHints.map((hint) =>
+                String(hint.id) === targetHintId ? nextHint : hint,
+              )
+            : [...current.droneHints, nextHint],
+        }));
+        setSelectedDroneHintId(hintId);
+        stopDrawingHint();
+      });
+
+      map.addInteraction(draw);
+      drawHintInteractionRef.current = draw;
+      setIsDrawingHint(true);
+    },
+    [selectedControlArea, stopDrawingHint, visibleData.droneHints],
+  );
+
+  const deleteDroneHint = useCallback(
+    (hint: DroneHintRow) => {
+      const hintId = String(hint.id);
+      setData((current) => ({
+        ...current,
+        droneHints: current.droneHints.filter(
+          (currentHint) => String(currentHint.id) !== hintId,
+        ),
+      }));
+      setSelectedDroneHintId((current) =>
+        current === hintId ? null : current,
+      );
+      if (editingDroneHintId === hintId) {
+        stopDrawingHint();
+      }
+    },
+    [editingDroneHintId, stopDrawingHint],
+  );
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -651,15 +952,17 @@ const Priwa = () => {
       layers: [
         streetBasemap,
         imageryBasemap,
-        layers.orthos,
         layers.warningPolygons,
         layers.paths,
         layers.controlAreas,
         layers.droneHints,
         layers.observations,
       ],
-      controls: createStandardMapControls({ includeAttribution: true }),
-      interactions: defaultInteractions({ pinchRotate: false }),
+      controls: [],
+      interactions: defaultInteractions({
+        doubleClickZoom: false,
+        pinchRotate: false,
+      }),
       view: new View({
         center: [920000, 6165000],
         zoom: 12,
@@ -669,6 +972,10 @@ const Priwa = () => {
     mapRef.current = map;
 
     return () => {
+      if (drawHintInteractionRef.current) {
+        map.removeInteraction(drawHintInteractionRef.current);
+        drawHintInteractionRef.current = null;
+      }
       map.setTarget(undefined);
       imageryBasemap.getSource()?.dispose();
       for (const layer of orthoRasterLayerRefs.current) {
@@ -687,62 +994,84 @@ const Priwa = () => {
   }, []);
 
   useEffect(() => {
-    void fetchPreviewDatasetOrtho()
-      .then(async ({ controlArea, ortho }) => {
-        const [result, predictionLabelId] = await Promise.all([
-          fetchPriwaData(controlArea),
-          fetchDeadwoodPredictionLabelId(),
+    void fetchPriwaData()
+      .then(async (result) => {
+        const [orthos, predictionLabelIds] = await Promise.all([
+          fetchPreviewDatasetOrthos(result.data.controlAreas),
+          fetchDeadwoodPredictionLabelIds(),
         ]);
+        const controlAreas = sortControlAreas(result.data.controlAreas);
+        const preferredControlArea =
+          controlAreas.find(
+            (area) => area.id === PRIWA_COMPARE_CONTROL_AREA_ID,
+          ) ??
+          controlAreas[0] ??
+          null;
 
         setData({
           ...result.data,
-          controlAreas: [controlArea],
-          orthos: [ortho],
+          controlAreas,
+          orthos,
         });
         setWarnings(result.warnings);
-        setDeadwoodPredictionLabelId(predictionLabelId);
-        setSelectedControlAreaId(controlArea.id);
+        setDeadwoodPredictionLabelIds(predictionLabelIds);
+        setSelectedControlAreaId(preferredControlArea?.id ?? null);
+        fitControlArea(preferredControlArea);
         setError(null);
       })
       .catch((fetchError: Error) => {
         setError(fetchError.message);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [fitControlArea]);
 
   useEffect(() => {
     layerRefs.current.controlAreas?.getSource()?.clear();
     layerRefs.current.controlAreas
       ?.getSource()
-      ?.addFeatures(createFeatures(data.controlAreas, "controlAreas"));
+      ?.addFeatures(createFeatures(visibleData.controlAreas, "controlAreas"));
 
     layerRefs.current.observations?.getSource()?.clear();
     layerRefs.current.observations
       ?.getSource()
-      ?.addFeatures(createFeatures(data.observations, "observations"));
+      ?.addFeatures(createFeatures(visibleData.observations, "observations"));
 
     layerRefs.current.warningPolygons?.getSource()?.clear();
     layerRefs.current.warningPolygons
       ?.getSource()
-      ?.addFeatures(createFeatures(data.warningPolygons, "warningPolygons"));
+      ?.addFeatures(
+        createFeatures(visibleData.warningPolygons, "warningPolygons"),
+      );
 
     layerRefs.current.droneHints?.getSource()?.clear();
     layerRefs.current.droneHints
       ?.getSource()
-      ?.addFeatures(createFeatures(data.droneHints, "droneHints"));
+      ?.addFeatures(createFeatures(visibleData.droneHints, "droneHints"));
 
     layerRefs.current.orthos?.getSource()?.clear();
-    layerRefs.current.orthos
-      ?.getSource()
-      ?.addFeatures(createFeatures(data.orthos, "orthos"));
 
     layerRefs.current.paths?.getSource()?.clear();
     layerRefs.current.paths
       ?.getSource()
-      ?.addFeatures(createFeatures(data.paths, "paths"));
+      ?.addFeatures(createFeatures(visibleData.paths, "paths"));
+  }, [visibleData]);
 
-    window.setTimeout(fitToLiveData, 0);
-  }, [data, fitToLiveData]);
+  useEffect(() => {
+    layerRefs.current.droneHints
+      ?.getSource()
+      ?.getFeatures()
+      .forEach((feature) => {
+        feature.set(
+          "selected",
+          String(feature.getId()) === selectedDroneHintId,
+        );
+        feature.changed();
+      });
+  }, [selectedDroneHintId, visibleData.droneHints]);
+
+  useEffect(() => {
+    stopDrawingHint();
+  }, [selectedControlAreaId, stopDrawingHint]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -753,12 +1082,18 @@ const Priwa = () => {
       layer.getSource()?.dispose();
       layer.dispose();
     }
+    applySwipePosition(map, isCompareMode, swipePositionRef.current);
 
-    orthoRasterLayerRefs.current = data.orthos
+    orthoRasterLayerRefs.current = renderedOrthos
       .filter((row) => row.cog_path)
       .slice(0, ORTHO_RASTER_LIMIT)
-      .map((row) => {
+      .map((row, index) => {
+        const isCurrentSwipeLayer =
+          isCompareMode && row.id === currentOrtho?.id && index > 0;
         const layer = new TileLayerWebGL({
+          className: isCurrentSwipeLayer
+            ? "ol-layer priwa-swipe-current"
+            : "ol-layer priwa-swipe-base",
           source: new GeoTIFF({
             sources: [
               {
@@ -769,18 +1104,24 @@ const Priwa = () => {
             ],
             convertToRGB: true,
           }),
-          opacity: layerOpacity,
+          opacity: ORTHO_RASTER_OPACITY,
           visible: visibility.orthos,
           maxZoom: 23,
           cacheSize: 1024,
           preload: 0,
-          zIndex: 18,
+          zIndex: 18 + index,
         });
 
         map.addLayer(layer);
         return layer;
       });
-  }, [data.orthos, layerOpacity, visibility.orthos]);
+
+    window.setTimeout(
+      () => applySwipePosition(map, isCompareMode, swipePositionRef.current),
+      0,
+    );
+    map.render();
+  }, [currentOrtho?.id, isCompareMode, renderedOrthos, visibility.orthos]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -791,15 +1132,15 @@ const Priwa = () => {
       deadwoodPredictionLayerRef.current = null;
     }
 
-    if (!deadwoodPredictionLabelId) return;
+    if (!selectedPredictionLabelId) return;
 
-    const layer = createDeadwoodVectorLayer(deadwoodPredictionLabelId);
+    const layer = createDeadwoodVectorLayer(selectedPredictionLabelId);
     layer.setZIndex(42);
-    layer.setOpacity(layerOpacityRef.current);
+    layer.setOpacity(DEADWOOD_PREDICTION_OPACITY);
     layer.setVisible(deadwoodPredictionVisibleRef.current);
     map.addLayer(layer);
     deadwoodPredictionLayerRef.current = layer;
-  }, [deadwoodPredictionLabelId]);
+  }, [selectedPredictionLabelId]);
 
   useEffect(() => {
     for (const [key, isVisible] of Object.entries(visibility) as [
@@ -819,6 +1160,15 @@ const Priwa = () => {
   }, [deadwoodPredictionVisible]);
 
   useEffect(() => {
+    swipePositionRef.current = swipePosition;
+    const map = mapRef.current;
+    if (!map) return;
+
+    applySwipePosition(map, isCompareMode, swipePosition);
+    map.render();
+  }, [isCompareMode, swipePosition]);
+
+  useEffect(() => {
     const isImagery = mapStyle === "satellite-streets-v12";
     streetBasemapRef.current?.setVisible(!isImagery);
     imageryBasemapRef.current?.setVisible(isImagery);
@@ -830,28 +1180,122 @@ const Priwa = () => {
     }
   }, [mapStyle]);
 
-  useEffect(() => {
-    layerOpacityRef.current = layerOpacity;
-    layerRefs.current.warningPolygons?.setOpacity(layerOpacity);
-    layerRefs.current.droneHints?.setOpacity(layerOpacity);
-    layerRefs.current.orthos?.setOpacity(layerOpacity);
-    layerRefs.current.observations?.setOpacity(layerOpacity);
-    layerRefs.current.paths?.setOpacity(layerOpacity);
-    for (const layer of orthoRasterLayerRefs.current) {
-      layer.setOpacity(layerOpacity);
-    }
-    deadwoodPredictionLayerRef.current?.setOpacity(layerOpacity);
-  }, [layerOpacity]);
-
   const updateVisibility = (key: PreviewLayerKey, checked: boolean) => {
     setVisibility((current) => ({ ...current, [key]: checked }));
   };
 
   return (
     <div className="relative h-full min-h-screen overflow-hidden bg-slate-100">
+      <style>
+        {`
+          .priwa-swipe-enabled .priwa-swipe-current {
+            clip-path: inset(0 0 0 var(${SWIPE_CSS_VAR}, 50%));
+            -webkit-clip-path: inset(0 0 0 var(${SWIPE_CSS_VAR}, 50%));
+          }
+        `}
+      </style>
       <div ref={mapContainerRef} className="absolute inset-0" />
 
-      <aside className="pointer-events-auto absolute right-3 top-24 z-20 w-[260px] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-gray-200/70 bg-white/95 shadow-xl backdrop-blur-sm md:right-4">
+      {isCompareMode && (
+        <>
+          <div
+            className="pointer-events-none absolute top-0 z-10 h-full w-px bg-white/90 shadow-[0_0_0_1px_rgba(31,41,55,0.35)]"
+            style={{ left: `${swipePosition}%` }}
+          />
+          <div className="pointer-events-auto absolute bottom-5 left-4 right-4 z-30 rounded-lg border border-gray-200/80 bg-white/95 px-4 py-2 shadow-xl backdrop-blur-sm">
+            <div className="mb-1 flex items-center justify-between text-[11px] font-semibold text-gray-700">
+              <span>Alt · Dataset {previousOrtho?.id}</span>
+              <span className="text-emerald-800">
+                Neu · Dataset {currentOrtho?.id}
+              </span>
+            </div>
+            <Slider
+              min={0}
+              max={100}
+              step={1}
+              value={swipePosition}
+              onChange={setSwipePosition}
+              tooltip={{ formatter: null }}
+            />
+          </div>
+        </>
+      )}
+
+      {isDrawingHint && (
+        <div className="pointer-events-none absolute left-1/2 top-24 z-30 w-[min(440px,calc(100vw-32px))] -translate-x-1/2 rounded-lg border border-blue-200 bg-blue-50/95 px-4 py-3 shadow-xl backdrop-blur-sm">
+          <div className="flex items-start gap-3">
+            <InfoCircleOutlined className="mt-0.5 text-lg text-blue-600" />
+            <div>
+              <p className="m-0 text-sm font-semibold text-gray-900">
+                {editingDroneHintId
+                  ? "Hinweis neu zeichnen"
+                  : "Polygon zeichnen"}
+              </p>
+              <p className="m-0 mt-1 text-xs leading-5 text-gray-700">
+                Punkte in die Karte klicken, mit Doppelklick abschließen.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <aside className="pointer-events-auto absolute left-3 top-24 z-20 w-[260px] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-gray-200/70 bg-white/95 shadow-xl backdrop-blur-sm">
+        <div className="flex items-center justify-between gap-2 border-b border-gray-100 px-3 py-2">
+          <h2 className="m-0 text-[10px] font-medium uppercase tracking-[0.08em] text-gray-500">
+            Kontrollflächen
+          </h2>
+          <Button size="small" icon={<AimOutlined />} onClick={fitToLiveData}>
+            Zoom
+          </Button>
+        </div>
+        <div className="max-h-[calc(100vh-144px)] overflow-y-auto p-2">
+          {loading ? (
+            <Skeleton active paragraph={{ rows: 3 }} title={false} />
+          ) : data.controlAreas.length === 0 ? (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="Keine Kontrollfläche sichtbar"
+            />
+          ) : (
+            <div className="space-y-1.5">
+              {data.controlAreas.map((area) => (
+                <button
+                  key={area.id}
+                  type="button"
+                  className={`w-full rounded-md border px-2 py-1.5 text-left transition ${
+                    area.id === selectedControlArea?.id
+                      ? "border-emerald-600 bg-emerald-50"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                  onClick={() => {
+                    setSelectedControlAreaId(area.id);
+                    fitControlArea(area);
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-xs font-semibold text-gray-900">
+                      {area.name}
+                    </span>
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${
+                        area.status === "active"
+                          ? "bg-emerald-500"
+                          : "bg-gray-300"
+                      }`}
+                    />
+                  </div>
+                  <p className="m-0 mt-0.5 truncate text-[11px] text-gray-500">
+                    {area.qfieldcloud_project_name ??
+                      "noch kein QFieldCloud-Projekt"}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </aside>
+
+      <aside className="pointer-events-auto absolute right-3 top-24 z-20 w-[280px] max-w-[calc(100vw-24px)] overflow-hidden rounded-lg border border-gray-200/70 bg-white/95 shadow-xl backdrop-blur-sm md:right-4">
         <div className="border-b border-gray-100 px-3 py-2">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -859,10 +1303,10 @@ const Priwa = () => {
                 PRIWA Monitoring
               </p>
               <h1 className="text-sm font-semibold text-gray-900">
-                Spotter preview
+                Spotter-Vorschau
               </h1>
             </div>
-            <Tooltip title="Live layer preview from PRIWA Supabase. Upload and sync actions are intentionally inactive.">
+            <Tooltip title="Live-Vorschau aus PRIWA Supabase. Upload, Schreiben und Sync sind hier noch inaktiv.">
               <InfoCircleOutlined className="text-gray-400 hover:text-gray-600" />
             </Tooltip>
           </div>
@@ -874,7 +1318,7 @@ const Priwa = () => {
               type="warning"
               showIcon
               className="mb-3"
-              message="PRIWA Supabase is not configured"
+              message="PRIWA Supabase ist nicht konfiguriert"
               description="Set VITE_PRIWA_SUPABASE_URL and VITE_PRIWA_SUPABASE_ANON_KEY."
             />
           )}
@@ -884,7 +1328,7 @@ const Priwa = () => {
               type="error"
               showIcon
               className="mb-3"
-              message="Could not load PRIWA layers"
+              message="PRIWA-Layer konnten nicht geladen werden"
               description={error}
             />
           )}
@@ -904,79 +1348,65 @@ const Priwa = () => {
           ) : (
             <>
               <section>
-                <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-[10px] font-medium uppercase tracking-[0.08em] text-gray-500">
-                    Kontrollflaechen
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <h2 className="m-0 text-[10px] font-medium uppercase tracking-[0.08em] text-gray-500">
+                    Prüfung
                   </h2>
-                  <Button
-                    size="small"
-                    icon={<AimOutlined />}
-                    onClick={fitToLiveData}
+                  <Tag
+                    color={releaseStatus === "accepted" ? "green" : "gold"}
+                    className="m-0 border-none text-[10px] font-medium uppercase"
                   >
-                    Fit
-                  </Button>
+                    {releaseStatus === "accepted"
+                      ? "freigegeben"
+                      : "in Prüfung"}
+                  </Tag>
                 </div>
 
-                {data.controlAreas.length === 0 ? (
-                  <Empty
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description="No control areas visible"
-                  />
-                ) : (
-                  <div className="space-y-2">
-                    {data.controlAreas.map((area) => (
-                      <button
-                        key={area.id}
-                        type="button"
-                        className={`w-full rounded-md border px-2.5 py-1.5 text-left transition ${
-                          area.id === selectedControlArea?.id
-                            ? "border-emerald-600 bg-emerald-50"
-                            : "border-gray-200 bg-white hover:border-gray-300"
-                        }`}
-                        onClick={() => setSelectedControlAreaId(area.id)}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="truncate text-xs font-semibold text-gray-900">
-                            {area.name}
-                          </span>
-                          <span
-                            className={`h-2 w-2 rounded-full ${area.status === "active" ? "bg-emerald-500" : "bg-gray-300"}`}
-                          />
-                        </div>
-                        <p className="mt-0.5 truncate text-[11px] text-gray-500">
-                          {area.qfieldcloud_project_name ??
-                            "No QField project yet"}
-                        </p>
-                      </button>
-                    ))}
+                <div className="rounded-md border border-gray-100 bg-gray-50 px-2 py-2 text-[11px] text-gray-600">
+                  <div className="grid grid-cols-[48px_1fr] gap-x-2 gap-y-1">
+                    <span>Neu</span>
+                    <span className="truncate font-medium text-gray-800">
+                      {currentFlightName}
+                    </span>
+                    <span>Alt</span>
+                    <span className="truncate font-medium text-gray-800">
+                      {previousFlightName}
+                    </span>
+                    <span>Projekt</span>
+                    <span className="truncate font-medium text-gray-800">
+                      {qfieldProjectName}
+                    </span>
                   </div>
-                )}
-              </section>
+                </div>
 
-              <div className="my-2 grid grid-cols-2 gap-1.5">
-                <div className="rounded-md bg-gray-50 px-2 py-1.5">
-                  <p className="text-[10px] uppercase tracking-[0.06em] text-gray-400">
-                    Begang
-                  </p>
-                  <p className="truncate text-xs font-semibold text-gray-800">
-                    Fruehjahr 2026
-                  </p>
+                <Button
+                  block
+                  size="small"
+                  className="mt-2"
+                  type={releaseStatus === "accepted" ? "default" : "primary"}
+                  icon={<CheckCircleOutlined />}
+                  onClick={() => setReleaseStatus("accepted")}
+                  disabled={releaseStatus === "accepted"}
+                >
+                  {releaseStatus === "accepted"
+                    ? "Befliegung freigegeben"
+                    : "Befliegung freigeben"}
+                </Button>
+
+                <div className="mt-2 flex items-center justify-between rounded-md border border-emerald-100 bg-emerald-50/70 px-2 py-1.5 text-[11px]">
+                  <span className="flex items-center gap-1.5 font-medium text-emerald-900">
+                    <CloudSyncOutlined />
+                    Feldpaket
+                  </span>
+                  <span className="text-emerald-800">{fieldPackageStatus}</span>
                 </div>
-                <div className="rounded-md bg-gray-50 px-2 py-1.5">
-                  <p className="text-[10px] uppercase tracking-[0.06em] text-gray-400">
-                    Orthos
-                  </p>
-                  <p className="text-xs font-semibold text-gray-800">
-                    {data.orthos.length}
-                  </p>
-                </div>
-              </div>
+              </section>
 
               <Divider className="my-2.5" />
 
               <section>
                 <div className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.08em] text-gray-500">
-                  Basemap
+                  Basiskarte
                 </div>
                 <Segmented
                   size="small"
@@ -989,31 +1419,31 @@ const Priwa = () => {
                 <Divider className="my-2.5" />
 
                 <h2 className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.08em] text-gray-500">
-                  Data Layers
+                  Ebenen
                 </h2>
                 <div className="flex flex-col gap-1">
                   <LayerToggle
                     label={layerVisuals.orthos.label}
                     color={layerVisuals.orthos.color}
                     checked={visibility.orthos}
-                    count={data.orthos.length}
+                    count={visibleData.orthos.length}
                     statusText={
-                      data.orthos.length > ORTHO_RASTER_LIMIT
-                        ? `${ORTHO_RASTER_LIMIT}/${data.orthos.length}`
+                      visibleData.orthos.length > ORTHO_RASTER_LIMIT
+                        ? `${ORTHO_RASTER_LIMIT}/${visibleData.orthos.length}`
                         : undefined
                     }
                     onChange={(checked) => updateVisibility("orthos", checked)}
                   />
                   <LayerToggle
-                    label="Deadtrees prediction"
+                    label="Deadtrees-Prognose"
                     color={mapColors.deadwood.fill}
                     checked={
-                      deadwoodPredictionVisible && !!deadwoodPredictionLabelId
+                      deadwoodPredictionVisible && !!selectedPredictionLabelId
                     }
-                    disabled={!deadwoodPredictionLabelId}
-                    count={deadwoodPredictionLabelId ? 1 : 0}
+                    disabled={!selectedPredictionLabelId}
+                    count={selectedPredictionLabelId ? 1 : 0}
                     statusText={
-                      deadwoodPredictionLabelId ? undefined : "not available"
+                      selectedPredictionLabelId ? undefined : "nicht verfügbar"
                     }
                     onChange={setDeadwoodPredictionVisible}
                   />
@@ -1021,7 +1451,7 @@ const Priwa = () => {
                     label={layerVisuals.controlAreas.label}
                     color={layerVisuals.controlAreas.color}
                     checked={visibility.controlAreas}
-                    count={data.controlAreas.length}
+                    count={visibleData.controlAreas.length}
                     onChange={(checked) =>
                       updateVisibility("controlAreas", checked)
                     }
@@ -1030,7 +1460,7 @@ const Priwa = () => {
                     label={layerVisuals.observations.label}
                     color={layerVisuals.observations.color}
                     checked={visibility.observations}
-                    count={data.observations.length}
+                    count={visibleData.observations.length}
                     onChange={(checked) =>
                       updateVisibility("observations", checked)
                     }
@@ -1039,7 +1469,7 @@ const Priwa = () => {
                     label={layerVisuals.warningPolygons.label}
                     color={layerVisuals.warningPolygons.color}
                     checked={visibility.warningPolygons}
-                    count={data.warningPolygons.length}
+                    count={visibleData.warningPolygons.length}
                     onChange={(checked) =>
                       updateVisibility("warningPolygons", checked)
                     }
@@ -1048,7 +1478,7 @@ const Priwa = () => {
                     label={layerVisuals.droneHints.label}
                     color={layerVisuals.droneHints.color}
                     checked={visibility.droneHints}
-                    count={data.droneHints.length}
+                    count={visibleData.droneHints.length}
                     onChange={(checked) =>
                       updateVisibility("droneHints", checked)
                     }
@@ -1057,7 +1487,7 @@ const Priwa = () => {
                     label={layerVisuals.paths.label}
                     color={layerVisuals.paths.color}
                     checked={visibility.paths}
-                    count={data.paths.length}
+                    count={visibleData.paths.length}
                     onChange={(checked) => updateVisibility("paths", checked)}
                   />
                   <LayerToggle
@@ -1065,27 +1495,88 @@ const Priwa = () => {
                     color={palette.neutral[300]}
                     checked={false}
                     disabled
-                    statusText="not synced"
+                    statusText="nicht synchronisiert"
                     onChange={() => undefined}
                   />
                 </div>
 
                 <Divider className="my-2.5" />
 
-                <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.08em] text-gray-500">
-                  Layer Opacity
-                </div>
-                <Slider
-                  min={0.2}
-                  max={1}
-                  step={0.01}
-                  value={layerOpacity}
-                  onChange={setLayerOpacity}
-                  tooltip={{
-                    formatter: (value) => `${Math.round((value || 0) * 100)}%`,
-                    placement: "left",
-                  }}
-                />
+                <section>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <h2 className="m-0 text-[10px] font-medium uppercase tracking-[0.08em] text-gray-500">
+                      Drohnenhinweise
+                    </h2>
+                    <div className="flex items-center gap-1.5">
+                      <Tag className="m-0 border-none text-[10px]" color="blue">
+                        {visibleData.droneHints.length} offen
+                      </Tag>
+                      <Button
+                        size="small"
+                        onClick={() =>
+                          isDrawingHint ? stopDrawingHint() : startDrawingHint()
+                        }
+                        disabled={!selectedControlArea}
+                      >
+                        {isDrawingHint ? "Abbrechen" : "Zeichnen"}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-gray-100 bg-gray-50 px-2 py-2">
+                    {visibleData.droneHints.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {visibleData.droneHints.map((note, index) => (
+                          <div
+                            key={note.id}
+                            className={`flex w-full items-center gap-1.5 rounded border px-2 py-1 text-[11px] transition ${
+                              selectedDroneHintId === String(note.id)
+                                ? "border-blue-500 bg-blue-50"
+                                : "border-transparent bg-white hover:border-blue-200"
+                            }`}
+                          >
+                            <button
+                              key={note.id}
+                              type="button"
+                              className="min-w-0 flex-1 truncate text-left text-gray-700"
+                              onClick={() => focusDroneHint(note)}
+                            >
+                              Hinweis {note.source_feature_id ?? index + 1}
+                            </button>
+                            <Button
+                              size="small"
+                              className="px-1.5 text-[10px]"
+                              disabled={isDrawingHint}
+                              onClick={() => startDrawingHint(note)}
+                            >
+                              Ändern
+                            </Button>
+                            <Button
+                              danger
+                              size="small"
+                              className="px-1.5 text-[10px]"
+                              disabled={isDrawingHint}
+                              onClick={() => deleteDroneHint(note)}
+                            >
+                              Löschen
+                            </Button>
+                            <Tooltip title="Status: offen">
+                              <Tag
+                                color="gold"
+                                className="m-0 hidden border-none text-[10px]"
+                              >
+                                offen
+                              </Tag>
+                            </Tooltip>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="m-0 text-[11px] text-gray-500">
+                        Keine Drohnenhinweise in dieser Kontrollfläche.
+                      </p>
+                    )}
+                  </div>
+                </section>
               </section>
             </>
           )}

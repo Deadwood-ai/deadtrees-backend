@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { Avatar, Badge, Button, Segmented, Typography, Table, Tag, Tooltip } from "antd";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Segmented,
+  Typography,
+  Table,
+  Tag,
+  Tooltip,
+} from "antd";
 import { useAuth } from "../hooks/useAuthProvider";
 import DataTable from "../components/DataTable";
 import UploadButton from "../components/Upload/UploadButton";
@@ -7,7 +16,12 @@ import { useNavigate, Link } from "react-router-dom";
 // import { useUserDatasets } from "../hooks/useDatasets";
 import { useMyFlags } from "../hooks/useDatasetFlags";
 import type { DatasetFlag } from "../types/flags";
-import { FileOutlined } from "@ant-design/icons";
+import {
+  CheckCircleOutlined,
+  CloudSyncOutlined,
+  EnvironmentOutlined,
+  FileOutlined,
+} from "@ant-design/icons";
 import PublicationModal from "../components/PublicationModal";
 import PublicationsTable from "../components/PublicationsTable";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -36,8 +50,207 @@ interface DatasetType {
 
 enum ActiveTab {
   MyDatasets = "My Datasets",
+  Priwa = "PRIWA Monitoring",
   Publications = "Published Datasets",
   MyIssues = "My Issues",
+}
+
+const priwaControlAreas = [
+  {
+    key: "priwa-test-k02",
+    name: "PRIWA_TEST_K02 Rammert Vergleich",
+    qfieldProject: "PRIWA_K02",
+    currentFlight: "Befliegung 17.04.2026",
+    previousFlight: "Befliegung 27.02.2026",
+    reviewStatus: "In Prüfung",
+    reviewColor: "gold",
+    packageStatus: "Wartet auf Freigabe",
+    packageColor: "blue",
+    openHints: 2,
+    doneHints: 0,
+    orthos: 2,
+  },
+  {
+    key: "priwa-test-k01",
+    name: "PRIWA_TEST_K01 Renchtal",
+    qfieldProject: "PRIWA_K01",
+    currentFlight: "Befliegung 02.09.2025",
+    previousFlight: "kein Vergleich",
+    reviewStatus: "Vorschau",
+    reviewColor: "default",
+    packageStatus: "Noch nicht geplant",
+    packageColor: "default",
+    openHints: 1,
+    doneHints: 0,
+    orthos: 1,
+  },
+];
+
+const priwaReviewSteps = [
+  { label: "Upload", status: "done" },
+  { label: "Verarbeitung", status: "done" },
+  { label: "Prüfung", status: "active" },
+  { label: "Feldpaket", status: "pending" },
+] as const;
+
+function PriwaMonitoringPanel({ onOpenMap }: { onOpenMap: () => void }) {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 border-b border-gray-100 pb-5 md:flex-row md:items-start md:justify-between">
+        <div>
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            PRIWA Monitoring
+          </Typography.Title>
+          <Typography.Text type="secondary">
+            Vorschau fuer Kontrollflaechen, Befliegungen, Drohnenhinweise und
+            Feldpaket-Status.
+          </Typography.Text>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="primary"
+            icon={<EnvironmentOutlined />}
+            onClick={onOpenMap}
+          >
+            PRIWA Karte öffnen
+          </Button>
+          <UploadButton />
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
+        <div className="overflow-hidden rounded-xl border border-gray-100">
+          <Table
+            rowKey="key"
+            dataSource={priwaControlAreas}
+            pagination={false}
+            columns={[
+              {
+                title: "Kontrollfläche",
+                key: "control_area",
+                render: (_, row) => (
+                  <div>
+                    <div className="font-semibold text-gray-900">
+                      {row.name}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      QFieldCloud: {row.qfieldProject}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                title: "Befliegungen",
+                key: "flights",
+                render: (_, row) => (
+                  <div className="min-w-[180px]">
+                    <div className="text-sm font-medium text-gray-900">
+                      {row.currentFlight}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Alt: {row.previousFlight}
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                title: "Prüfung",
+                key: "status",
+                render: (_, row) => (
+                  <Tag
+                    color={row.reviewColor}
+                    className="m-0 border-none font-medium"
+                  >
+                    {row.reviewStatus}
+                  </Tag>
+                ),
+              },
+              {
+                title: "Feldpaket",
+                key: "package",
+                render: (_, row) => (
+                  <Tag
+                    color={row.packageColor}
+                    className="m-0 border-none font-medium"
+                  >
+                    {row.packageStatus}
+                  </Tag>
+                ),
+              },
+              {
+                title: "Drohnenhinweise",
+                key: "hints",
+                render: (_, row) => (
+                  <span className="text-gray-600">
+                    {row.openHints} offen / {row.doneHints} erledigt
+                  </span>
+                ),
+              },
+              {
+                title: "Orthos",
+                key: "orthos",
+                render: (_, row) => (
+                  <span className="text-gray-600">{row.orthos}</span>
+                ),
+              },
+              {
+                title: "Actions",
+                key: "actions",
+                render: () => (
+                  <Button size="small" onClick={onOpenMap}>
+                    Karte
+                  </Button>
+                ),
+              },
+            ]}
+          />
+        </div>
+
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.08em] text-emerald-800">
+                Aktueller Zyklus
+              </div>
+              <div className="text-base font-semibold text-gray-900">
+                Von Befliegung zu Feldpaket
+              </div>
+            </div>
+            <CloudSyncOutlined className="text-xl text-emerald-700" />
+          </div>
+
+          <div className="space-y-2">
+            {priwaReviewSteps.map((step) => (
+              <div
+                key={step.label}
+                className="flex items-center gap-3 rounded-lg bg-white/75 px-3 py-2"
+              >
+                <span
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                    step.status === "done"
+                      ? "bg-emerald-600 text-white"
+                      : step.status === "active"
+                        ? "bg-amber-400 text-amber-950"
+                        : "bg-gray-200 text-gray-500"
+                  }`}
+                >
+                  {step.status === "done" ? <CheckCircleOutlined /> : null}
+                </span>
+                <span className="text-sm font-medium text-gray-700">
+                  {step.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 rounded-lg border border-dashed border-emerald-200 bg-white/70 p-3 text-sm text-gray-600">
+            Freigabe und Paketierung sind hier als Workflow-Zustand dargestellt.
+            Der Cron/Processor-Pfad bleibt ein späterer Implementierungsschritt.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function ProfileAvatar({ email, size = 84 }: ProfileAvatarProps) {
@@ -47,7 +260,14 @@ export function ProfileAvatar({ email, size = 84 }: ProfileAvatarProps) {
   // Use DiceBear API with the email hash as seed
   const avatarUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${emailHash}`;
 
-  return <Avatar size={size} src={avatarUrl} alt={`Avatar for ${email}`} className="bg-primary/10" />;
+  return (
+    <Avatar
+      size={size}
+      src={avatarUrl}
+      alt={`Avatar for ${email}`}
+      className="bg-primary/10"
+    />
+  );
 }
 
 export default function ProfilePage() {
@@ -61,7 +281,8 @@ export default function ProfilePage() {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>(ActiveTab.MyDatasets);
   const [selectedDatasets, setSelectedDatasets] = useState<DatasetType[]>([]);
-  const [isPublicationModalVisible, setIsPublicationModalVisible] = useState(false);
+  const [isPublicationModalVisible, setIsPublicationModalVisible] =
+    useState(false);
   const [resetSelectionFlag, setResetSelectionFlag] = useState(false);
 
   const handleSelectedRowsChange = (rows: DatasetType[]) => {
@@ -119,7 +340,9 @@ export default function ProfilePage() {
                   <Button type="primary" onClick={() => navigate("/deadtrees")}>
                     Explore Satellite Maps
                   </Button>
-                  <Button onClick={() => navigate("/dataset")}>Browse Dataset Archive</Button>
+                  <Button onClick={() => navigate("/dataset")}>
+                    Browse Dataset Archive
+                  </Button>
                 </>
               }
             />
@@ -137,10 +360,16 @@ export default function ProfilePage() {
                 <ProfileAvatar email={user?.email ?? ""} size={96} />
               </Badge>
               <div className="flex min-w-0 flex-col">
-                <Typography.Title level={2} style={{ margin: 0, fontWeight: 700 }}>
+                <Typography.Title
+                  level={2}
+                  style={{ margin: 0, fontWeight: 700 }}
+                >
                   My Account
                 </Typography.Title>
-                <Typography.Text className="text-lg font-medium break-all" type="secondary">
+                <Typography.Text
+                  className="text-lg font-medium break-all"
+                  type="secondary"
+                >
                   {user?.email}
                 </Typography.Text>
               </div>
@@ -150,24 +379,47 @@ export default function ProfilePage() {
                 <div className="flex items-start gap-3">
                   <div className="text-xl">💡</div>
                   <div>
-                    <h3 className="mb-2 text-base font-semibold text-blue-900">Upload and Publish Your Data</h3>
+                    <h3 className="mb-2 text-base font-semibold text-blue-900">
+                      Upload and Publish Your Data
+                    </h3>
                     <div className="space-y-2 text-sm text-blue-800/80">
                       <p className="m-0">
-                        Upload and visualize your data on the platform. Publish datasets via{" "}
-                        <a href="https://freidata.uni-freiburg.de/" target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+                        Upload and visualize your data on the platform. Publish
+                        datasets via{" "}
+                        <a
+                          href="https://freidata.uni-freiburg.de/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold underline"
+                        >
                           FreiDATA
                         </a>{" "}
                         to get a DOI.
                       </p>
-                      <ul className="m-0 space-y-1 pl-0" style={{ listStyleType: "none" }}>
+                      <ul
+                        className="m-0 space-y-1 pl-0"
+                        style={{ listStyleType: "none" }}
+                      >
                         <li>
-                          <span className="font-medium text-blue-900">Formats:</span> Standalone GeoTIFF (max 20GB) or ZIP with raw drone images - JPEG, JPG (max 30GB)
+                          <span className="font-medium text-blue-900">
+                            Formats:
+                          </span>{" "}
+                          Standalone GeoTIFF (max 20GB) or ZIP with raw drone
+                          images - JPEG, JPG (max 30GB)
                         </li>
                         <li>
-                          <span className="font-medium text-blue-900">Raw Images:</span> For orthomosaic generation we recommend {">"}85%-front and {">"}70%-side overlap
+                          <span className="font-medium text-blue-900">
+                            Raw Images:
+                          </span>{" "}
+                          For orthomosaic generation we recommend {">"}85%-front
+                          and {">"}70%-side overlap
                         </li>
                         <li>
-                          <span className="font-medium text-blue-900">Requirements:</span> RGB/NIRRGB, {"<"}10cm resolution, any coordinate reference system
+                          <span className="font-medium text-blue-900">
+                            Requirements:
+                          </span>{" "}
+                          RGB/NIRRGB, {"<"}10cm resolution, any coordinate
+                          reference system
                         </li>
                       </ul>
                     </div>
@@ -180,7 +432,12 @@ export default function ProfilePage() {
             <div className="mb-6 flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
               <div className="w-full md:w-auto overflow-x-auto">
                 <Segmented
-                  options={["My Datasets", "Published Datasets", "My Issues"]}
+                  options={[
+                    "My Datasets",
+                    "PRIWA Monitoring",
+                    "Published Datasets",
+                    "My Issues",
+                  ]}
                   size={isMobile ? "middle" : "large"}
                   value={activeTab}
                   onChange={(value) => {
@@ -193,7 +450,13 @@ export default function ProfilePage() {
                 {activeTab === ActiveTab.MyDatasets ? (
                   <>
                     {selectedDatasets.length > 0 ? (
-                      <Button size="large" type="primary" icon={<FileOutlined />} onClick={showPublicationModal} className="shadow-sm">
+                      <Button
+                        size="large"
+                        type="primary"
+                        icon={<FileOutlined />}
+                        onClick={showPublicationModal}
+                        className="shadow-sm"
+                      >
                         Publish Data ({selectedDatasets.length})
                       </Button>
                     ) : (
@@ -211,23 +474,31 @@ export default function ProfilePage() {
                   resetSelection={resetSelectionFlag}
                   onResetSelectionComplete={handleResetComplete}
                 />
+              ) : activeTab === ActiveTab.Priwa ? (
+                <PriwaMonitoringPanel onOpenMap={() => navigate("/priwa")} />
               ) : activeTab === ActiveTab.Publications ? (
                 <PublicationsTable />
               ) : (
                 <div>
                   {myFlags.length === 0 ? (
                     <div className="my-12 flex flex-col items-center justify-center text-center">
-                      <Typography.Title level={4} className="mb-2">No issues yet</Typography.Title>
+                      <Typography.Title level={4} className="mb-2">
+                        No issues yet
+                      </Typography.Title>
                       <Typography.Text type="secondary" className="text-base">
-                        Report an issue from any dataset’s details page to see it here.
+                        Report an issue from any dataset’s details page to see
+                        it here.
                       </Typography.Text>
                     </div>
                   ) : (
                     <>
                       <div className="mb-6">
-                        <Typography.Title level={4} style={{ margin: 0 }}>My Issues</Typography.Title>
+                        <Typography.Title level={4} style={{ margin: 0 }}>
+                          My Issues
+                        </Typography.Title>
                         <Typography.Text type="secondary">
-                          User-reported issues you've filed. Only you and auditors can view them.
+                          User-reported issues you've filed. Only you and
+                          auditors can view them.
                         </Typography.Text>
                       </div>
                       <div className="overflow-hidden rounded-xl border border-gray-100">
@@ -235,70 +506,105 @@ export default function ProfilePage() {
                           rowKey="id"
                           dataSource={myFlags}
                           columns={[
-                          {
-                            title: "Dataset ID",
-                            dataIndex: "dataset_id",
-                            key: "dataset_id",
-                            responsive: ["xs"],
-                            render: (id: number) => (
-                              <Link to={`/dataset/${id}`} className="font-medium text-[#1B5E35] hover:underline">
-                                {id}
-                              </Link>
-                            ),
-                          },
-                          {
-                            title: "Description",
-                            key: "description",
-                            responsive: ["sm"],
-                            render: (_: unknown, f: DatasetFlag) => (
-                              <Tooltip title={f.description}>
-                                <span className="text-gray-600">{(f.description || "").slice(0, 120) + (f.description.length > 120 ? "…" : "")}</span>
-                              </Tooltip>
-                            ),
-                          },
-                          {
-                            title: "Categories",
-                            key: "categories",
-                            responsive: ["md"],
-                            render: (_: unknown, f: DatasetFlag) => (
-                              <div className="flex gap-1">
-                                {f.is_ortho_mosaic_issue && <Tag color="orange" className="m-0 border-none bg-orange-50 font-medium">Orthomosaic</Tag>}
-                                {f.is_prediction_issue && <Tag color="blue" className="m-0 border-none bg-blue-50 font-medium">Segmentation</Tag>}
-                              </div>
-                            ),
-                          },
-                          {
-                            title: "Status",
-                            dataIndex: "status",
-                            key: "status",
-                            responsive: ["xs"],
-                            render: (status: string) => (
-                              <Tag 
-                                className="m-0 border-none font-medium capitalize"
-                                color={status === "open" ? "red" : status === "acknowledged" ? "gold" : "green"}
-                              >
-                                {status}
-                              </Tag>
-                            ),
-                          },
-                          {
-                            title: "Created",
-                            dataIndex: "created_at",
-                            key: "created_at",
-                            responsive: ["sm"],
-                            render: (iso: string) => <span className="text-gray-500">{new Date(iso).toLocaleString()}</span>,
-                          },
-                          // Removed last status change per requirements
-                          {
-                            title: "Actions",
-                            key: "actions",
-                            responsive: ["xs"],
-                            render: (_: unknown, f: DatasetFlag) => (
-                              <Button size="small" onClick={() => navigate(`/dataset/${f.dataset_id}`)}>
-                                View Map
-                              </Button>
-                            ),
-                          },
+                            {
+                              title: "Dataset ID",
+                              dataIndex: "dataset_id",
+                              key: "dataset_id",
+                              responsive: ["xs"],
+                              render: (id: number) => (
+                                <Link
+                                  to={`/dataset/${id}`}
+                                  className="font-medium text-[#1B5E35] hover:underline"
+                                >
+                                  {id}
+                                </Link>
+                              ),
+                            },
+                            {
+                              title: "Description",
+                              key: "description",
+                              responsive: ["sm"],
+                              render: (_: unknown, f: DatasetFlag) => (
+                                <Tooltip title={f.description}>
+                                  <span className="text-gray-600">
+                                    {(f.description || "").slice(0, 120) +
+                                      (f.description.length > 120 ? "…" : "")}
+                                  </span>
+                                </Tooltip>
+                              ),
+                            },
+                            {
+                              title: "Categories",
+                              key: "categories",
+                              responsive: ["md"],
+                              render: (_: unknown, f: DatasetFlag) => (
+                                <div className="flex gap-1">
+                                  {f.is_ortho_mosaic_issue && (
+                                    <Tag
+                                      color="orange"
+                                      className="m-0 border-none bg-orange-50 font-medium"
+                                    >
+                                      Orthomosaic
+                                    </Tag>
+                                  )}
+                                  {f.is_prediction_issue && (
+                                    <Tag
+                                      color="blue"
+                                      className="m-0 border-none bg-blue-50 font-medium"
+                                    >
+                                      Segmentation
+                                    </Tag>
+                                  )}
+                                </div>
+                              ),
+                            },
+                            {
+                              title: "Status",
+                              dataIndex: "status",
+                              key: "status",
+                              responsive: ["xs"],
+                              render: (status: string) => (
+                                <Tag
+                                  className="m-0 border-none font-medium capitalize"
+                                  color={
+                                    status === "open"
+                                      ? "red"
+                                      : status === "acknowledged"
+                                        ? "gold"
+                                        : "green"
+                                  }
+                                >
+                                  {status}
+                                </Tag>
+                              ),
+                            },
+                            {
+                              title: "Created",
+                              dataIndex: "created_at",
+                              key: "created_at",
+                              responsive: ["sm"],
+                              render: (iso: string) => (
+                                <span className="text-gray-500">
+                                  {new Date(iso).toLocaleString()}
+                                </span>
+                              ),
+                            },
+                            // Removed last status change per requirements
+                            {
+                              title: "Actions",
+                              key: "actions",
+                              responsive: ["xs"],
+                              render: (_: unknown, f: DatasetFlag) => (
+                                <Button
+                                  size="small"
+                                  onClick={() =>
+                                    navigate(`/dataset/${f.dataset_id}`)
+                                  }
+                                >
+                                  View Map
+                                </Button>
+                              ),
+                            },
                           ]}
                           pagination={{ pageSize: 10 }}
                           scroll={{ x: isMobile ? 560 : "max-content" }}
