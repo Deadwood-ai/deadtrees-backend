@@ -17,6 +17,7 @@ import DatasetReferencePatchEditor from "./pages/DatasetReferencePatchEditor";
 import DatasetLabelEditor from "./pages/DatasetLabelEditor";
 import DatasetCorrections from "./pages/DatasetCorrections";
 import Deadtrees from "./pages/Deadtrees";
+import Priwa from "./pages/Priwa";
 import SignUp from "./pages/auth/SignUp";
 import SignIn from "./pages/auth/SignIn";
 import Forgotpassword from "./pages/auth/ForgotPassword";
@@ -42,6 +43,7 @@ function LayoutWrapper() {
     "/dataset-audit",
     "/dataset-label",
     "/dataset-corrections",
+    "/priwa",
     "/sign-in",
     "/sign-up",
     "/forgot-password",
@@ -115,6 +117,7 @@ function AppWithTracking() {
         {/* Public labelling / corrections editor */}
         <Route path="dataset-corrections/:id" element={<DatasetCorrections />} />
         <Route path="deadtrees" element={<Deadtrees />} />
+        <Route path="priwa" element={<Priwa />} />
         <Route path="about" element={<About />} />
         <Route path="impressum" element={<Impressum />} />
         <Route path="datenschutzerklaerung" element={<Datenschutzerklaerung />} />

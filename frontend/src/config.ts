@@ -31,6 +31,10 @@ const SUPABASE_ANON_KEY_PROD = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const SUPABASE_SENTINEL_URL = import.meta.env.VITE_SUPABASE_SENTINEL_PROCESSING_URL as string;
 const SUPABASE_SENTINEL_ANON_KEY = import.meta.env.VITE_SUPABASE_SENTINEL_PROCESSING_ANON_KEY as string;
 
+// PRIWA Supabase/PostGIS project used by the live layer preview.
+const PRIWA_SUPABASE_URL = import.meta.env.VITE_PRIWA_SUPABASE_URL as string;
+const PRIWA_SUPABASE_ANON_KEY = import.meta.env.VITE_PRIWA_SUPABASE_ANON_KEY as string;
+
 // AI Segmentation API — use the same remote base in dev and prod (no dev-only path)
 const SAM_API_URL =
   (import.meta.env.VITE_SAM_API_URL as string | undefined) || "https://geosense--sam-api-fastapi-app.modal.run";
@@ -43,6 +47,8 @@ export const Settings = {
   SUPABASE_ANON_KEY: DEV ? SUPABASE_ANON_KEY_DEV : SUPABASE_ANON_KEY_PROD,
   SUPABASE_SENTINEL_URL,
   SUPABASE_SENTINEL_ANON_KEY,
+  PRIWA_SUPABASE_URL,
+  PRIWA_SUPABASE_ANON_KEY,
   API_URL_UPLOAD_ENDPOINT: DEV ? API_URL_UPLOAD_ENDPOINT_DEV : API_URL_UPLOAD_ENDPOINT_PROD,
   DEV: DEV,
   SAM_API_URL,
