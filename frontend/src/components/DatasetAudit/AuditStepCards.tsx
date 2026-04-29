@@ -24,6 +24,7 @@ interface UserFlagsCardProps {
 
 export function UserFlagsCard({ flags, isFlagsLoading, isUpdatingFlag, datasetId, onUpdateFlag }: UserFlagsCardProps) {
 	const latestFlagStatusesRef = useRef(new Map<number, FlagStatus>());
+	const undoVersionsRef = useRef(new Map<number, number>());
 
 	const formatStatus = (status: FlagStatus) => status.charAt(0).toUpperCase() + status.slice(1);
 
@@ -36,6 +37,8 @@ export function UserFlagsCard({ flags, isFlagsLoading, isUpdatingFlag, datasetId
 			const previousStatus = flag.status;
 			await onUpdateFlag({ flag_id: flag.id, dataset_id: datasetId, new_status: newStatus });
 			latestFlagStatusesRef.current.set(flag.id, newStatus);
+			const undoVersion = (undoVersionsRef.current.get(flag.id) ?? 0) + 1;
+			undoVersionsRef.current.set(flag.id, undoVersion);
 
 			const key = `flag-status-${flag.id}-${Date.now()}`;
 			notification.success({
@@ -46,13 +49,17 @@ export function UserFlagsCard({ flags, isFlagsLoading, isUpdatingFlag, datasetId
 						size="small"
 						onClick={async () => {
 							try {
-								if (latestFlagStatusesRef.current.get(flag.id) !== newStatus) {
+								if (
+									undoVersionsRef.current.get(flag.id) !== undoVersion ||
+									latestFlagStatusesRef.current.get(flag.id) !== newStatus
+								) {
 									notification.destroy(key);
 									message.warning("Undo skipped because this issue changed again.");
 									return;
 								}
 								await onUpdateFlag({ flag_id: flag.id, dataset_id: datasetId, new_status: previousStatus });
 								latestFlagStatusesRef.current.set(flag.id, previousStatus);
+								undoVersionsRef.current.set(flag.id, undoVersion + 1);
 								notification.destroy(key);
 								message.success(`Issue moved back to ${previousStatus}`);
 							} catch {
