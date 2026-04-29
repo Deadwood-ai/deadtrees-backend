@@ -20,6 +20,7 @@ import { supabase } from "../hooks/useSupabase";
 import { useAuth } from "../hooks/useAuthProvider";
 import EditDatasetModal from "./EditDatasetModal";
 import ProcessingProgress from "./ProcessingProgress";
+import { isDatasetProcessingComplete } from "../utils/processingSteps";
 import { isGeonadirDataset } from "../utils/datasetUtils";
 import { fixAuthorNamesEncoding, sanitizeText } from "../utils/textUtils";
 import { IDataset } from "../types/dataset";
@@ -157,17 +158,7 @@ const DataTable: React.FC<DataTableProps> = ({
   console.debug("userData in DataTable", userData);
 
   const isDatasetComplete = (record: Dataset): boolean => {
-    return !!(
-      !record.has_error &&
-      record.is_upload_done &&
-      record.is_ortho_done &&
-      record.is_cog_done &&
-      record.is_thumbnail_done &&
-      record.is_metadata_done &&
-      record.is_deadwood_done &&
-      record.is_forest_cover_done &&
-      record.is_combined_model_done
-    );
+    return !!(record.is_thumbnail_done && isDatasetProcessingComplete(record));
   };
 
   // Dataset is viewable on the map - use centralized utility

@@ -45,6 +45,7 @@ import { useDatasetLogs, useProcessingOverview, ProcessingOverviewRow, Processin
 import { getAcquisitionPeriod } from "../utils/phenologyUtils";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useAnalytics } from "../hooks/useAnalytics";
+import { isDatasetProcessingComplete } from "../utils/processingSteps";
 
 const { Title, Text } = Typography;
 
@@ -86,14 +87,7 @@ const formatHours = (value: number | null | undefined): string => {
 
 // Helper function to check if dataset processing is complete
 const isProcessingComplete = (dataset: IDataset) => {
-	return (
-		dataset.is_upload_done &&
-		dataset.is_ortho_done &&
-		dataset.is_cog_done &&
-		dataset.is_thumbnail_done &&
-		dataset.is_deadwood_done &&
-		dataset.is_metadata_done
-	);
+	return dataset.is_thumbnail_done && isDatasetProcessingComplete(dataset);
 };
 
 // Helper to format location
@@ -501,6 +495,7 @@ function DatasetAuditInner() {
 		hasProcessingStates,
 		inSeasonOnly,
 		auditMap,
+		correctionsMap,
 		contributorMap,
 		flaggedAgg,
 		hasAboveMinId,

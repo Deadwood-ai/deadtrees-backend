@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./useSupabase";
 import { useAuth } from "./useAuthProvider";
 import { useProcessingNotification } from "./useProcessingNotification";
+import { isDatasetProcessingComplete } from "../utils/processingSteps";
 
 interface StatusPayloadData {
   dataset_id: number;
@@ -68,21 +69,7 @@ export function useDatasetSubscription() {
             // Helper function to check if processing is complete
             const isProcessingComplete = (data: StatusPayloadData | null): boolean => {
               if (!data) return false;
-
-              // Check if ODM step is required (presence of is_odm_done field)
-              const odmComplete = data.is_odm_done === undefined || data.is_odm_done;
-
-              return (
-                data.is_upload_done &&
-                odmComplete &&
-                data.is_ortho_done &&
-                data.is_cog_done &&
-                data.is_thumbnail_done &&
-                data.is_metadata_done &&
-                data.is_deadwood_done &&
-                data.is_forest_cover_done &&
-                data.is_combined_model_done
-              );
+              return data.is_thumbnail_done && isDatasetProcessingComplete({ ...data, file_name: datasetInfo.file_name });
             };
 
             // Check if processing just completed (was incomplete before, now complete)
