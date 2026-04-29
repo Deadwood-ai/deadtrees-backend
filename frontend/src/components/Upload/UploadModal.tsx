@@ -113,10 +113,10 @@ const PREDICTION_PROCESSING_STEPS = [
 ];
 
 const GEOTIFF_PROCESSING_STEPS = [
+  "geotiff",
   "cog",
   "thumbnail",
   "metadata",
-  "geotiff",
   ...PREDICTION_PROCESSING_STEPS,
 ];
 

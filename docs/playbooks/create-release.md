@@ -76,6 +76,45 @@ If `/home/jj1049/prod/deadtrees` is dirty or `git pull` conflicts, the cron
 auto-deploy may fail even though GitHub Actions succeeded. Check
 `auto-deploy.log` before assuming production is on the merged commit.
 
+## Processor Queue Task-Type Quirk
+
+When manually requeueing production datasets to validate segmentation models,
+include `geotiff` before any prediction task unless you intentionally want to
+reuse the already-standardized raster without refreshing it. The prediction
+processors can fetch an existing ortho, but they do not run GeoTIFF
+standardization themselves. `geotiff` is the task that standardizes the raster
+and refreshes the ortho entry that model stages consume.
+
+Use this task list for an already-uploaded, already-ODM-processed dataset when
+you want to compare old and new model outputs:
+
+```json
+["geotiff", "deadwood_v1", "treecover_v1", "deadwood_treecover_combined_v2"]
+```
+
+Use this full task list for new/raw ZIP processing when all derived products
+should be regenerated:
+
+```json
+[
+  "odm_processing",
+  "geotiff",
+  "cog",
+  "thumbnail",
+  "metadata",
+  "deadwood_v1",
+  "treecover_v1",
+  "deadwood_treecover_combined_v2"
+]
+```
+
+The processor executes `geotiff` before `cog`, `thumbnail`, metadata, and model
+stages regardless of the array order, but keep the order explicit in docs and
+manual API calls so humans can see the intended pipeline. The legacy and
+combined model stages share `is_deadwood_done` / `is_forest_cover_done` status
+flags, so label rows and `model_config` are the reliable way to confirm which
+model variants were actually produced.
+
 ## Source Of Truth
 
 - release version: repo-wide CalVer tag such as `v2026.04.17`
