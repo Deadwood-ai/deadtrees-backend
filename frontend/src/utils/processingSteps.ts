@@ -12,6 +12,7 @@ export const GEOTIFF_PROCESSING_STEPS: ProcessingStep[] = [
   { key: "cog", label: "Optimizing Data", description: "Converting to optimized format for visualization" },
   { key: "deadwood", label: "AI Analysis", description: "Running AI analysis for deadwood detection" },
   { key: "treecover", label: "Tree Cover Analysis", description: "Running AI analysis for tree cover segmentation" },
+  { key: "combined_model", label: "Combined AI Analysis", description: "Running combined deadwood and tree cover model" },
 ];
 
 export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
@@ -23,6 +24,7 @@ export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
   { key: "cog", label: "Optimizing Data", description: "Converting to optimized format for visualization" },
   { key: "deadwood", label: "AI Analysis", description: "Running AI analysis for deadwood detection" },
   { key: "treecover", label: "Tree Cover Analysis", description: "Running AI analysis for tree cover segmentation" },
+  { key: "combined_model", label: "Combined AI Analysis", description: "Running combined deadwood and tree cover model" },
 ];
 
 export interface DatasetProgress {
@@ -34,6 +36,7 @@ export interface DatasetProgress {
   is_cog_done?: boolean;
   is_deadwood_done?: boolean;
   is_forest_cover_done?: boolean;
+  is_combined_model_done?: boolean;
   has_error?: boolean;
   current_status?: string;
   final_assessment?: "ready" | "fixable_issues" | "no_issues" | "exclude_completely" | null;
@@ -123,6 +126,7 @@ export function calculateProcessingProgress(dataset: DatasetProgress): {
     dataset.is_cog_done || false,
     isDeadwoodProcessingComplete(dataset), // Smart deadwood completion check
     isTreecoverProcessingComplete(dataset), // Smart treecover completion check
+    dataset.is_combined_model_done || false,
   ];
 
   // Find the current step (first incomplete step)

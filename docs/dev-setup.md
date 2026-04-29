@@ -203,6 +203,41 @@ This writes an ignored keypair to `.local/ssh/processing-to-storage` and `.local
 If you prefer a different key location, set absolute paths in `LOCAL_TEST_SSH_PRIVATE_KEY_PATH` and
 `LOCAL_TEST_SSH_PUBLIC_KEY_PATH` before running `docker compose -f docker-compose.test.yaml ...`.
 
+## Processor-server validation workflow
+
+This local laptop/worktree is good for API, shared, frontend, docs, and
+non-GPU checks. Processor tests that need NVIDIA runtime, model checkpoints, or
+full combined-model execution should run on the processing server dev checkout:
+
+```bash
+ssh processing-server
+cd /home/jj1049/dev/deadtrees
+git fetch origin <branch>
+git checkout -B <branch> origin/<branch>
+source venv/bin/activate
+deadtrees dev test processor processor/tests/test_processor.py
+deadtrees dev test processor processor/tests/test_process_deadwood_treecover_combined_v2.py::test_model_loads
+```
+
+If `/home/jj1049/dev/deadtrees` is dirty or not the current monorepo checkout,
+move it aside first instead of deleting it:
+
+```bash
+cd /home/jj1049/dev
+ts=$(date -u +%Y%m%dT%H%M%SZ)
+mv deadtrees "deadtrees.backup-$ts"
+git clone https://github.com/Deadwood-ai/deadtrees.git deadtrees
+cd deadtrees
+git fetch origin <branch>
+git checkout -B <branch> origin/<branch>
+```
+
+Copy ignored local test assets or `.env` from the backup only when needed. For
+new status columns or tables, apply the migration to the dev/test Supabase DB
+before running processor tests and reload the PostgREST schema cache. Never use
+this workflow against `/home/jj1049/prod/deadtrees` unless the user explicitly
+asks for a production operation.
+
 ## Codex app worktrees
 
 If you use the Codex desktop app, configure a project Local Environment so new

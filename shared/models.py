@@ -74,6 +74,7 @@ class StatusEnum(str, Enum):
 	thumbnail_processing = 'thumbnail_processing'
 	deadwood_segmentation = 'deadwood_segmentation'
 	forest_cover_segmentation = 'forest_cover_segmentation'
+	deadwood_treecover_combined_segmentation = 'deadwood_treecover_combined_segmentation'
 	audit_in_progress = 'audit_in_progress'
 
 
@@ -182,6 +183,7 @@ class Status(BaseModel):
 	is_thumbnail_done: bool = False
 	is_deadwood_done: bool = False
 	is_forest_cover_done: bool = False
+	is_combined_model_done: bool = False
 	is_metadata_done: bool = False
 	is_odm_done: bool = False
 	is_audited: bool = False

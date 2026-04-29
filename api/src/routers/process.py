@@ -28,7 +28,7 @@ _TASK_TYPE_STATUS_FLAGS = {
 	TaskTypeEnum.thumbnail: ('is_thumbnail_done',),
 	TaskTypeEnum.deadwood_v1: ('is_deadwood_done',),
 	TaskTypeEnum.treecover_v1: ('is_forest_cover_done',),
-	TaskTypeEnum.deadwood_treecover_combined_v2: ('is_deadwood_done', 'is_forest_cover_done'),
+	TaskTypeEnum.deadwood_treecover_combined_v2: ('is_combined_model_done',),
 }
 
 
@@ -37,7 +37,13 @@ def _task_type_to_status_flags(task_type: TaskTypeEnum) -> tuple[str, ...]:
 
 
 class ProcessRequest(BaseModel):
-	task_types: List[str]
+	task_types: List[str] = Field(
+		description=(
+			'Processing stages to enqueue. Include geotiff before model prediction stages '
+			'when rerunning predictions on an existing dataset so the standardized ortho is refreshed. '
+			'Use deadwood_v1, treecover_v1, and deadwood_treecover_combined_v2 together when comparing old and new models.'
+		)
+	)
 	priority: Optional[int] = Field(default=2, ge=1, le=5, description='Task priority (1=highest, 5=lowest)')
 
 
@@ -137,7 +143,8 @@ def create_processing_task(
 					for task_type in validated_task_types:
 						for flag in _task_type_to_status_flags(task_type):
 							reset_fields[flag] = False
-					client.table(settings.statuses_table).update(reset_fields).eq('dataset_id', dataset_id).execute()
+					with use_client() as service_client:
+						service_client.table(settings.statuses_table).update(reset_fields).eq('dataset_id', dataset_id).execute()
 					logger.info(
 						f'Cleared error state for dataset {dataset_id} (requeue)',
 						LogContext(category=LogCategory.ADD_PROCESS, user_id=user.id, dataset_id=dataset_id, token=token),

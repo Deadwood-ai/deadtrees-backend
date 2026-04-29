@@ -15,6 +15,7 @@ interface StatusPayloadData {
   is_metadata_done: boolean;
   is_deadwood_done: boolean;
   is_forest_cover_done: boolean;
+  is_combined_model_done: boolean;
   has_error: boolean;
   error_message?: string;
 }
@@ -79,7 +80,8 @@ export function useDatasetSubscription() {
                 data.is_thumbnail_done &&
                 data.is_metadata_done &&
                 data.is_deadwood_done &&
-                data.is_forest_cover_done
+                data.is_forest_cover_done &&
+                data.is_combined_model_done
               );
             };
 

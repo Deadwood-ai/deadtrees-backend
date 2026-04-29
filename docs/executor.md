@@ -88,6 +88,26 @@ deadtrees dev debug api specific_test.py
 deadtrees dev debug processor specific_test.py
 ```
 
+#### **Local vs Processor-Server Test Routing**
+
+Use this split for large processor/model changes:
+
+- Run API, shared-model, frontend, docs, and non-GPU checks on the local
+  machine/worktree.
+- Run processor tests that need NVIDIA runtime, model checkpoints, or
+  comprehensive combined-model validation on the processing server dev checkout
+  at `/home/jj1049/dev/deadtrees`.
+- Keep the processing-server validation checkout on the PR branch being tested.
+  If the dev checkout is dirty or stale, move it aside as a timestamped backup
+  and clone/fetch the current monorepo branch again; do not edit
+  `/home/jj1049/prod/deadtrees`.
+- Use the same `deadtrees dev test processor ...` commands on the processing
+  server. Apply new migrations only to the local/dev Supabase instance before
+  processor tests that require new columns, then reload PostgREST schema cache
+  if needed.
+- Leave prod processors and prod queue state alone unless the user explicitly
+  asks for a production operation.
+
 #### **Testing Workflow for Each Task**
 
 1. **Implement the feature** as described in the current task

@@ -111,6 +111,7 @@ def test_all_expected_status_values_present():
 		'metadata_processing',
 		'odm_processing',
 		'thumbnail_processing',
+		'deadwood_treecover_combined_segmentation',
 	}
 	actual_values = {status.value for status in StatusEnum}
 	assert expected_values.issubset(actual_values)
@@ -137,6 +138,14 @@ def test_status_model_is_odm_done_serialization():
 	assert status_dict['is_odm_done'] is True
 
 
+def test_status_model_is_combined_model_done_serialization():
+	"""Test that the dedicated combined-model flag serializes correctly."""
+	status = Status(dataset_id=1, is_combined_model_done=True)
+	status_dict = status.model_dump()
+	assert 'is_combined_model_done' in status_dict
+	assert status_dict['is_combined_model_done'] is True
+
+
 def test_status_model_all_odm_flags():
 	"""Test that Status model has all expected completion flags"""
 	status = Status(dataset_id=1)
@@ -147,6 +156,7 @@ def test_status_model_all_odm_flags():
 		'is_thumbnail_done',
 		'is_deadwood_done',
 		'is_forest_cover_done',
+		'is_combined_model_done',
 		'is_metadata_done',
 		'is_odm_done',
 	]

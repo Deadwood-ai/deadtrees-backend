@@ -20,7 +20,6 @@ from shared.logging import LogContext, LogCategory, UnifiedLogger, SupabaseHandl
 logger = UnifiedLogger(__name__)
 logger.add_supabase_handler(SupabaseHandler())
 
-
 # Maps each task type to its corresponding is_*_done flag and human-readable stage name.
 # Used by crash detection to determine exactly which stage a previous run crashed during.
 PIPELINE_STAGE_MAP = [
@@ -33,7 +32,7 @@ PIPELINE_STAGE_MAP = [
 	(TaskTypeEnum.treecover_v1, 'is_forest_cover_done', 'forest_cover_segmentation'),
 	(
 		TaskTypeEnum.deadwood_treecover_combined_v2,
-		('is_deadwood_done', 'is_forest_cover_done'),
+		'is_combined_model_done',
 		'deadwood_treecover_combined_segmentation',
 	),
 ]
@@ -82,7 +81,7 @@ def get_completed_stages(status_data: dict) -> list[str]:
 		list[str]: Human-readable names of completed stages
 	"""
 	completed = []
-	for _, done_flags, stage_name in PIPELINE_STAGE_MAP:
+	for task_type, done_flags, stage_name in PIPELINE_STAGE_MAP:
 		if all(status_data.get(flag, False) for flag in _stage_done_flags(done_flags)):
 			completed.append(stage_name)
 	return completed
@@ -97,7 +96,6 @@ def are_requested_stages_complete(status_data: dict, task_types: list) -> bool:
 		for flag in _stage_done_flags(done_flags)
 	]
 	return bool(requested) and all(status_data.get(done_flag, False) for done_flag in requested)
-
 
 
 def get_next_task(token: str) -> QueueTask:

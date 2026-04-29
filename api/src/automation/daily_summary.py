@@ -217,9 +217,16 @@ def fetch_upload_metrics(client: Client, period_start: datetime) -> dict:
 	# Using PostgREST embedding to join v2_datasets with v2_statuses
 	period_str = period_start.isoformat()
 	
-	response = client.table(settings.datasets_table).select(
-		'id, v2_statuses(has_error, current_status, is_deadwood_done, is_forest_cover_done, is_odm_done)'
-	).gte('created_at', period_str).execute()
+	response = (
+		client.table(settings.datasets_table)
+		.select(
+			'id, v2_statuses('
+			'has_error, current_status, is_deadwood_done, '
+			'is_forest_cover_done, is_combined_model_done, is_odm_done)'
+		)
+		.gte('created_at', period_str)
+		.execute()
+	)
 	
 	if response.data:
 		for row in response.data:
@@ -239,7 +246,7 @@ def fetch_upload_metrics(client: Client, period_start: datetime) -> dict:
 				current_status = status.get("current_status", "idle")
 				is_processed = any(
 					status.get(flag, False)
-					for flag in ("is_deadwood_done", "is_forest_cover_done", "is_odm_done")
+					for flag in ("is_deadwood_done", "is_forest_cover_done", "is_combined_model_done", "is_odm_done")
 				)
 				
 				if has_error:
