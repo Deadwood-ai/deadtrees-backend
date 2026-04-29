@@ -65,7 +65,7 @@ const describeColorModel = (samplesPerPixel: number, photometricInterpretation: 
 };
 
 const getBandDescriptions = (image: {
-  getGDALMetadata?: (sample?: number | null) => Record<string, string> | null;
+  getGDALMetadata?: (sample?: number) => Record<string, string> | null;
 }, samplesPerPixel: number): string[] => {
   const descriptions: string[] = [];
 

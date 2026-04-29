@@ -173,12 +173,11 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
       ]);
 
       if (authRequestRef.current !== requestId) {
-        return null;
+        return { status: "invalid" } satisfies SessionValidationResult;
       }
 
       if (validationResult === authValidationTimeout) {
-        const outcome = classifySessionValidationResult({ timedOut: true });
-        throw new Error(outcome.reason);
+        throw new Error("Auth session validation timed out.");
       }
 
       const {
@@ -197,6 +196,11 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (outcome.status === "invalid_session") {
         recoverInvalidSession(error ?? new Error(outcome.reason), requestId);
+        return { status: "invalid" } satisfies SessionValidationResult;
+      }
+
+      if (!validatedUser) {
+        recoverInvalidSession(new Error("Supabase returned no authenticated user for the restored session."), requestId);
         return { status: "invalid" } satisfies SessionValidationResult;
       }
 

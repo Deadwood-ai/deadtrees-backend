@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Segmented, Typography } from "antd";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 

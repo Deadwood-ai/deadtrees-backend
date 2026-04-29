@@ -7,6 +7,7 @@ export interface IReferencePatch {
   dataset_id: number;
   user_id: string;
   resolution_cm: PatchResolution;
+  status: PatchStatus;
   geometry: GeoJSON.Polygon; // In UTM projection (specified by utm_zone)
   parent_tile_id: number | null; // TODO: Rename to parent_patch_id in future migration
   patch_index: string; // Renamed from tile_index in DB
@@ -29,8 +30,8 @@ export interface IReferencePatch {
   reference_forest_cover_label_id?: number | null;
 
   // Layer-specific validation (null = pending, true = good, false = bad)
-  deadwood_validated: boolean | null;
-  forest_cover_validated: boolean | null;
+  deadwood_validated?: boolean | null;
+  forest_cover_validated?: boolean | null;
 
   created_at: string;
   updated_at: string;

@@ -180,8 +180,9 @@ const PolygonStatsModal = ({
       }}
     >
       {loading && (
-        <div className="flex items-center justify-center py-16">
-          <Spin size="large" tip="Computing statistics from COG data..." />
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-gray-500">
+          <Spin size="large" />
+          <span>Computing statistics from COG data...</span>
         </div>
       )}
 

@@ -111,19 +111,6 @@ const QualityValue = ({ quality }: QualityValueProps) => {
   );
 };
 
-const BooleanValue = ({ value }: { value: boolean | null | undefined }) => {
-  if (value === null || value === undefined) {
-    return <Typography.Text className="text-gray-400">—</Typography.Text>;
-  }
-
-  return (
-    <span className="flex items-center gap-1.5">
-      <Typography.Text>{value ? "Yes" : "No"}</Typography.Text>
-      <span>{value ? "🟢" : "🔴"}</span>
-    </span>
-  );
-};
-
 interface AuditSectionProps {
   audit: AuditInfo | null | undefined;
 }

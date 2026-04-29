@@ -138,7 +138,7 @@ const DataGallery = ({ hideHeader = false }: { hideHeader?: boolean }) => {
 
     // Take only the first entry for each author in the authors array
     filtered.forEach((item) => {
-      item.authors.forEach((author: string) => {
+      item.authors?.forEach((author: string) => {
         const authorKey = author.trim().toLowerCase();
         if (!authorMap.has(authorKey)) {
           authorMap.set(authorKey, item);

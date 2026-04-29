@@ -39,9 +39,9 @@ export default function DatasetNavigation({
 
   const formatDate = (dataset: IDataset) => {
     return new Date(
-      dataset.aquisition_year,
-      dataset.aquisition_month ? dataset.aquisition_month - 1 : 0,
-      dataset.aquisition_day || 1,
+      Number(dataset.aquisition_year),
+      dataset.aquisition_month ? Number(dataset.aquisition_month) - 1 : 0,
+      dataset.aquisition_day ? Number(dataset.aquisition_day) : 1,
     ).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",

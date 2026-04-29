@@ -1,6 +1,5 @@
 import { Layout } from "antd";
 import { Link } from "react-router-dom";
-import { useLocation } from "react-router-dom";
 const { Footer: AntFooter } = Layout;
 
 interface FooterProps {
@@ -8,7 +7,6 @@ interface FooterProps {
 }
 
 export default function Footer({ className = "" }: FooterProps) {
-  const location = useLocation();
   return (
     <AntFooter style={{ margin: 0, padding: 2 }} className={`bg-slate-100 ${className}`}>
       <div className="mx-auto px-4">

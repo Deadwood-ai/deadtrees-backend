@@ -1,6 +1,6 @@
 import { Settings } from "../config";
 
-const download = async (dataset_id, token) => {
+const download = async (dataset_id: number, token: string) => {
   try {
     const response = await fetch(
       // `${Settings.API_URL}/download/datasets/${dataset_id}/dataset.zip`,

@@ -45,7 +45,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isVisible, onClose, onApplyFi
   }, [isVisible, form, currentFilters, defaultDateRange]);
 
   // Apply filters immediately on any change
-  const handleFormChange = (changedValues: Partial<AdvancedFilters>, allValues: AdvancedFilters) => {
+  const handleFormChange = (_changedValues: Partial<AdvancedFilters>, allValues: AdvancedFilters) => {
     onApplyFilters(allValues);
   };
 

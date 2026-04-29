@@ -1,4 +1,4 @@
-import { GeoJSON } from "geojson";
+import type * as GeoJSON from "geojson";
 
 export enum ILabelSource {
   MANUAL = "manual",

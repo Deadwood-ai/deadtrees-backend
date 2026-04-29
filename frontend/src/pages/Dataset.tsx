@@ -258,8 +258,9 @@ export default function Dataset() {
           filterByViewport={filterByViewport}
         />
       ) : (
-        <div className="flex h-full items-center justify-center">
-          <Spin size="large" tip="Loading data..." />
+        <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-500">
+          <Spin size="large" />
+          <span>Loading data...</span>
         </div>
       )}
     </div>
@@ -334,8 +335,9 @@ export default function Dataset() {
           )}
         </div>
         {!displayData ? (
-          <div className="flex h-full items-center justify-center">
-            <Spin size="large" tip="Loading map..." />
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-500">
+            <Spin size="large" />
+            <span>Loading map...</span>
           </div>
         ) : displayData.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center rounded-lg bg-white">

@@ -6,9 +6,12 @@ import { Fill, Stroke, Style } from "ol/style";
 import MVT from "ol/format/MVT";
 import GeoJSON from "ol/format/GeoJSON";
 import { Polygon } from "ol/geom";
+import type Geometry from "ol/geom/Geometry";
 import { supabase } from "../../hooks/useSupabase";
 import { base64ToArrayBuffer } from "../../utils/base64ToArrayBuffer";
 import Feature from "ol/Feature";
+import VectorTile from "ol/VectorTile";
+import type { FeatureLike } from "ol/Feature";
 import { palette } from "../../theme/palette";
 import { mapColors } from "../../theme/mapColors";
 
@@ -26,23 +29,23 @@ interface VectorLayerConfig {
 }
 
 const createVectorLayer = (config: VectorLayerConfig) => {
-  const vectorSource = new VectorTileSource({
-    format: new MVT({
+  const vectorSource = new VectorTileSource<Feature<Geometry>>({
+    format: new MVT<Feature<Geometry>>({
       featureClass: Feature,
       geometryName: "geom",
     }),
     tileLoadFunction: async (tile, url) => {
+      const vectorTile = tile as VectorTile<Feature<Geometry>>;
       const [z, x, y] = url.split("/").slice(-3).map(Number);
       // console.log(`[Tile Request] z=${z}, x=${x}, y=${y}`);
       // Skip API call completely if no labelId is provided
       if (!config.labelId) {
         // Set empty features for the tile when no label ID exists
-        tile.setFeatures([]);
+        vectorTile.setFeatures([]);
         return;
       }
 
       try {
-        const startTime = performance.now();
         const rpcParams: Record<string, unknown> = {
           z,
           x,
@@ -63,10 +66,10 @@ const createVectorLayer = (config: VectorLayerConfig) => {
           // console.log(`[Tile Success] z=${z}, x=${x}, y=${y}, fetch=${fetchTime.toFixed(0)}ms`);
           // const decodeStart = performance.now();
           const uint8Array = base64ToArrayBuffer(data);
-          const format = tile.getFormat();
+          const format = vectorTile.getFormat();
 
           const features = format.readFeatures(uint8Array, {
-            extent: tile.extent,
+            extent: vectorTile.extent,
             featureProjection: "EPSG:3857",
           });
 
@@ -81,7 +84,7 @@ const createVectorLayer = (config: VectorLayerConfig) => {
           //   }
           // });
 
-          tile.setFeatures(features);
+          vectorTile.setFeatures(features);
         } else {
           tile.setState(3); // ERROR
         }
@@ -98,7 +101,7 @@ const createVectorLayer = (config: VectorLayerConfig) => {
   });
 
   // Create style function for correction-aware styling
-  const getFeatureStyle = (feature: Feature) => {
+  const getFeatureStyle = (feature: FeatureLike) => {
     // Get correction status from feature properties (only available with corrections-aware MVT)
     const correctionStatus = feature.get("correction_status") as string | undefined;
     const correctionOperation = feature.get("correction_operation") as string | undefined;
