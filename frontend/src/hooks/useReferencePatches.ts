@@ -9,8 +9,13 @@ import {
   IPatchGenerationProgress,
 } from "../types/referencePatches";
 
-type ReferencePatchCreateInput = Omit<IReferencePatch, "id" | "created_at" | "updated_at" | "user_id" | "status"> & {
+export type ReferencePatchCreateInput = Omit<
+  IReferencePatch,
+  "id" | "created_at" | "updated_at" | "user_id" | "status" | "utm_zone" | "epsg_code"
+> & {
   status?: PatchStatus;
+  utm_zone?: string | null;
+  epsg_code?: number | null;
 };
 
 const getPatchStatus = (patch: Partial<IReferencePatch> & { status?: PatchStatus | null }): PatchStatus => {
@@ -414,7 +419,7 @@ export function useUpdatePatchStatus() {
           .eq("id", updatedPatch.parent_tile_id);
       }
 
-      return normalizeReferencePatch(updatedPatch);
+      return updatedPatch;
     },
     onSuccess: (data) => {
       const datasetId = (data as IReferencePatch).dataset_id;

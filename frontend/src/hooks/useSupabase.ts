@@ -6,7 +6,7 @@ import { isInvalidSessionError } from "../utils/authSession";
 export const supabase = createClient(Settings.SUPABASE_URL, Settings.SUPABASE_ANON_KEY);
 
 export function clearSupabaseAuthStorage() {
-  const storageKey = `sb-${new URL(Settings.SUPABASE_URL).hostname.split(".")[0]}-auth-token`;
+  const storageKey = (supabase as unknown as { storageKey?: string }).storageKey;
 
   if (typeof window !== "undefined" && storageKey) {
     window.localStorage.removeItem(storageKey);

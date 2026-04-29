@@ -5,6 +5,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  ReferencePatchCreateInput,
   useClearPatchSessionLock,
   useCompletePatchGeneration,
   useCreateReferencePatch,
@@ -50,28 +51,15 @@ export {
   useReopenPatchGeneration as useReopenTileGeneration,
 };
 
-const normalizeTileInput = (
-  tile: CreateMLTileInput,
-) => {
-  const patch = mlTileToReferencePatch({
-    ...tile,
-    id: 0,
-    user_id: "",
-    created_at: "",
-    updated_at: "",
-    status: tile.status ?? "pending",
-    utm_zone: tile.utm_zone ?? "31N",
-    epsg_code: tile.epsg_code ?? 32631,
-  });
-  const { id, user_id, created_at, updated_at, ...createPayload } = patch;
-  void id;
-  void user_id;
-  void created_at;
-  void updated_at;
+const normalizeTileInput = (tile: CreateMLTileInput): ReferencePatchCreateInput => {
+  const { tile_index, ...tilePayload } = tile;
+
   return {
-    ...createPayload,
-    deadwood_validated: createPayload.deadwood_validated ?? null,
-    forest_cover_validated: createPayload.forest_cover_validated ?? null,
+    ...tilePayload,
+    patch_index: tile_index,
+    status: tilePayload.status ?? "pending",
+    deadwood_validated: tilePayload.deadwood_validated ?? null,
+    forest_cover_validated: tilePayload.forest_cover_validated ?? null,
   };
 };
 
