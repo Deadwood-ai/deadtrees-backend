@@ -4,10 +4,11 @@ from pathlib import Path
 import processor.src.processor as processor_module
 from shared.db import use_client
 from shared.settings import settings
-from shared.models import TaskTypeEnum, QueueTask, StatusEnum
+from shared.models import COMBINED_MODEL_CONFIG, LabelDataEnum, TaskTypeEnum, QueueTask, StatusEnum
 from processor.src.processor import (
 	background_process, process_task, get_next_task,
 	detect_crashed_stage, get_completed_stages, are_requested_stages_complete, PIPELINE_STAGE_MAP,
+	DEADWOOD_V1_MODEL_CONFIG, TREECOVER_V1_MODEL_CONFIG,
 )
 
 
@@ -497,6 +498,81 @@ def test_combined_stage_requires_both_deadwood_and_forest_cover_flags():
 	assert detect_crashed_stage(status_data, [TaskTypeEnum.deadwood_treecover_combined_v2]) == 'unknown'
 	assert are_requested_stages_complete(status_data, [TaskTypeEnum.deadwood_treecover_combined_v2]) is True
 	assert 'deadwood_treecover_combined_segmentation' in get_completed_stages(status_data)
+
+
+def test_mixed_legacy_and_combined_recovery_requires_combined_model_labels():
+	status_data = {
+		'is_deadwood_done': True,
+		'is_forest_cover_done': True,
+	}
+	task_types = [
+		TaskTypeEnum.deadwood_v1,
+		TaskTypeEnum.treecover_v1,
+		TaskTypeEnum.deadwood_treecover_combined_v2,
+	]
+	completed_model_labels = {
+		(
+			LabelDataEnum.deadwood.value,
+			DEADWOOD_V1_MODEL_CONFIG['module'],
+			DEADWOOD_V1_MODEL_CONFIG['checkpoint_name'],
+		),
+		(
+			LabelDataEnum.forest_cover.value,
+			TREECOVER_V1_MODEL_CONFIG['module'],
+			TREECOVER_V1_MODEL_CONFIG['checkpoint_name'],
+		),
+	}
+
+	assert are_requested_stages_complete(status_data, task_types, completed_model_labels) is False
+	assert (
+		detect_crashed_stage(status_data, task_types, completed_model_labels)
+		== 'deadwood_treecover_combined_segmentation'
+	)
+	assert 'deadwood_segmentation' in get_completed_stages(status_data, completed_model_labels)
+	assert 'forest_cover_segmentation' in get_completed_stages(status_data, completed_model_labels)
+	assert 'deadwood_treecover_combined_segmentation' not in get_completed_stages(
+		status_data, completed_model_labels
+	)
+
+
+def test_mixed_legacy_and_combined_recovery_accepts_all_model_labels():
+	status_data = {
+		'is_deadwood_done': True,
+		'is_forest_cover_done': True,
+	}
+	task_types = [
+		TaskTypeEnum.deadwood_v1,
+		TaskTypeEnum.treecover_v1,
+		TaskTypeEnum.deadwood_treecover_combined_v2,
+	]
+	completed_model_labels = {
+		(
+			LabelDataEnum.deadwood.value,
+			DEADWOOD_V1_MODEL_CONFIG['module'],
+			DEADWOOD_V1_MODEL_CONFIG['checkpoint_name'],
+		),
+		(
+			LabelDataEnum.forest_cover.value,
+			TREECOVER_V1_MODEL_CONFIG['module'],
+			TREECOVER_V1_MODEL_CONFIG['checkpoint_name'],
+		),
+		(
+			LabelDataEnum.deadwood.value,
+			COMBINED_MODEL_CONFIG['module'],
+			COMBINED_MODEL_CONFIG['checkpoint_name'],
+		),
+		(
+			LabelDataEnum.forest_cover.value,
+			COMBINED_MODEL_CONFIG['module'],
+			COMBINED_MODEL_CONFIG['checkpoint_name'],
+		),
+	}
+
+	assert are_requested_stages_complete(status_data, task_types, completed_model_labels) is True
+	assert detect_crashed_stage(status_data, task_types, completed_model_labels) == 'unknown'
+	assert 'deadwood_treecover_combined_segmentation' in get_completed_stages(
+		status_data, completed_model_labels
+	)
 
 
 @pytest.fixture
