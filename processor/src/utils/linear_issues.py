@@ -35,6 +35,7 @@ def get_stage_display_name(stage: str) -> str:
 	legacy_mapping = {
 		'deadwood_segmentation': 'Deadwood',
 		'treecover_segmentation': 'Tree Cover',
+		'deadwood_treecover_combined_segmentation': 'Combined Deadwood+Treecover',
 		'processing': 'Processing',
 	}
 	return legacy_mapping.get(stage, stage)

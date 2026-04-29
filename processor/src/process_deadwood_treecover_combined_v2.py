@@ -43,7 +43,7 @@ def process_deadwood_treecover_combined_v2(task: QueueTask, token: str, temp_dir
     update_status(
         token,
         dataset_id=ortho.dataset_id,
-        current_status=StatusEnum.deadwood_segmentation,
+        current_status=StatusEnum.deadwood_treecover_combined_segmentation,
         is_combined_model_done=False,
     )
     logger.info(
@@ -87,8 +87,6 @@ def process_deadwood_treecover_combined_v2(task: QueueTask, token: str, temp_dir
             token,
             dataset_id=ortho.dataset_id,
             current_status=StatusEnum.idle,
-            is_deadwood_done=True,
-            is_forest_cover_done=True,
             is_combined_model_done=True,
         )
         logger.info(

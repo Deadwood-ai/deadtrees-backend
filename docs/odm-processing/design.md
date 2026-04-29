@@ -366,9 +366,10 @@ need to be regenerated. Add `odm_processing` only for raw ZIP reprocessing.
 
 Legacy model stages use `is_deadwood_done` and `is_forest_cover_done` as their
 completion flags. The combined v2 stage has its own `is_combined_model_done`
-flag, and also sets the legacy flags when it finishes so existing layer/status
-surfaces keep working. Use the model-prediction labels and their `model_config`
-when you need to verify which model variant actually produced a layer.
+flag and its own `deadwood_treecover_combined_segmentation` current status.
+It does not mark the legacy model flags as complete. Use the model-prediction
+labels and their `model_config` when you need to verify which model variant
+actually produced a layer.
 
 ---
 

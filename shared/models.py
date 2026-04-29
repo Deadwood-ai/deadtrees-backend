@@ -74,6 +74,7 @@ class StatusEnum(str, Enum):
 	thumbnail_processing = 'thumbnail_processing'
 	deadwood_segmentation = 'deadwood_segmentation'
 	forest_cover_segmentation = 'forest_cover_segmentation'
+	deadwood_treecover_combined_segmentation = 'deadwood_treecover_combined_segmentation'
 	audit_in_progress = 'audit_in_progress'
 
 

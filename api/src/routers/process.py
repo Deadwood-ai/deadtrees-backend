@@ -28,11 +28,7 @@ _TASK_TYPE_STATUS_FLAGS = {
 	TaskTypeEnum.thumbnail: ('is_thumbnail_done',),
 	TaskTypeEnum.deadwood_v1: ('is_deadwood_done',),
 	TaskTypeEnum.treecover_v1: ('is_forest_cover_done',),
-	TaskTypeEnum.deadwood_treecover_combined_v2: (
-		'is_deadwood_done',
-		'is_forest_cover_done',
-		'is_combined_model_done',
-	),
+	TaskTypeEnum.deadwood_treecover_combined_v2: ('is_combined_model_done',),
 }
 
 
@@ -147,7 +143,8 @@ def create_processing_task(
 					for task_type in validated_task_types:
 						for flag in _task_type_to_status_flags(task_type):
 							reset_fields[flag] = False
-					client.table(settings.statuses_table).update(reset_fields).eq('dataset_id', dataset_id).execute()
+					with use_client() as service_client:
+						service_client.table(settings.statuses_table).update(reset_fields).eq('dataset_id', dataset_id).execute()
 					logger.info(
 						f'Cleared error state for dataset {dataset_id} (requeue)',
 						LogContext(category=LogCategory.ADD_PROCESS, user_id=user.id, dataset_id=dataset_id, token=token),

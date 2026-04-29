@@ -101,8 +101,8 @@ def test_process_combined_segmentation_success(combined_task, auth_token):
 
 	status = status_response.data[0]
 	assert status['is_combined_model_done'] is True
-	assert status['is_deadwood_done'] is True
-	assert status['is_forest_cover_done'] is True
+	assert status['is_deadwood_done'] is False
+	assert status['is_forest_cover_done'] is False
 
 	label_data_values = {label['label_data'] for label in response.data}
 	# The model must save at least one of the two layers (empty predictions are skipped)

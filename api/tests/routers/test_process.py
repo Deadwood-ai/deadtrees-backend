@@ -10,12 +10,8 @@ from shared.models import TaskTypeEnum, LicenseEnum, PlatformEnum, DatasetAccess
 client = TestClient(app)
 
 
-def test_combined_task_maps_to_dedicated_and_legacy_status_flags():
-	assert _task_type_to_status_flags(TaskTypeEnum.deadwood_treecover_combined_v2) == (
-		'is_deadwood_done',
-		'is_forest_cover_done',
-		'is_combined_model_done',
-	)
+def test_combined_task_maps_to_dedicated_status_flag():
+	assert _task_type_to_status_flags(TaskTypeEnum.deadwood_treecover_combined_v2) == ('is_combined_model_done',)
 
 
 @pytest.fixture(scope='function')
@@ -352,9 +348,9 @@ def test_rerun_succeeds_after_failed_processing(test_dataset, auth_token):
 		assert response.data[0]['is_processing'] is False
 
 
-def test_rerun_combined_task_resets_both_prediction_flags(test_dataset, auth_token):
-	"""Rerunning the combined model after an error must reset both labels it produces."""
-	with use_client(auth_token) as supabaseClient:
+def test_rerun_combined_task_resets_only_combined_prediction_flag(test_dataset, auth_token):
+	"""Rerunning the combined model should not reset legacy model completion flags."""
+	with use_client() as supabaseClient:
 		supabaseClient.table(settings.statuses_table).update(
 			{
 				'has_error': True,
@@ -379,8 +375,8 @@ def test_rerun_combined_task_resets_both_prediction_flags(test_dataset, auth_tok
 		status = response.data[0]
 		assert status['has_error'] is False
 		assert status['error_message'] is None
-		assert status['is_deadwood_done'] is False
-		assert status['is_forest_cover_done'] is False
+		assert status['is_deadwood_done'] is True
+		assert status['is_forest_cover_done'] is True
 		assert status['is_combined_model_done'] is False
 
 

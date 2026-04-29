@@ -112,7 +112,7 @@ The processor executes `geotiff` before `cog`, `thumbnail`, metadata, and model
 stages regardless of the array order, but keep the order explicit in docs and
 manual API calls so humans can see the intended pipeline. Legacy model stages
 use `is_deadwood_done` and `is_forest_cover_done`; the combined v2 stage uses
-`is_combined_model_done` and also sets the legacy flags for UI compatibility.
+`is_combined_model_done` and does not mark the legacy model flags as complete.
 Label rows and `model_config` are still the reliable way to confirm which model
 variants were actually produced.
 

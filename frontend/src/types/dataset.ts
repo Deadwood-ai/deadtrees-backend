@@ -1,10 +1,5 @@
 import { FeatureCollection } from "geojson";
 
-interface ICentroid {
-  lng: number;
-  lat: number;
-}
-
 export interface IThumbnail {
   file_name: string;
   url: string;
@@ -74,6 +69,7 @@ export interface IDataset {
   is_thumbnail_done: boolean;
   is_deadwood_done: boolean;
   is_forest_cover_done: boolean;
+  is_combined_model_done: boolean;
   is_metadata_done: boolean;
   is_audited: boolean;
   has_error: boolean;
@@ -158,4 +154,3 @@ export interface IStats {
   countries_count: number;
   contributors_count: number;
 }
-

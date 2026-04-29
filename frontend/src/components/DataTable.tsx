@@ -54,6 +54,7 @@ interface Dataset {
   is_metadata_done: boolean;
   is_deadwood_done: boolean;
   is_forest_cover_done: boolean;
+  is_combined_model_done: boolean;
   isInPublication?: boolean; // Track if dataset is in publication process
   data_access?: "public" | "private" | "viewonly";
   archived?: boolean;
@@ -164,7 +165,8 @@ const DataTable: React.FC<DataTableProps> = ({
       record.is_thumbnail_done &&
       record.is_metadata_done &&
       record.is_deadwood_done &&
-      record.is_forest_cover_done
+      record.is_forest_cover_done &&
+      record.is_combined_model_done
     );
   };
 

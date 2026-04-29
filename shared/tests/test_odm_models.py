@@ -111,6 +111,7 @@ def test_all_expected_status_values_present():
 		'metadata_processing',
 		'odm_processing',
 		'thumbnail_processing',
+		'deadwood_treecover_combined_segmentation',
 	}
 	actual_values = {status.value for status in StatusEnum}
 	assert expected_values.issubset(actual_values)

@@ -43,7 +43,8 @@ const ProcessingProgress: React.FC<ProcessingProgressProps> = ({ dataset, showDe
     dataset.is_metadata_done ||
     dataset.is_cog_done ||
     dataset.is_deadwood_done ||
-    dataset.is_forest_cover_done,
+    dataset.is_forest_cover_done ||
+    dataset.is_combined_model_done,
   );
 
   const isQueued = Boolean(
