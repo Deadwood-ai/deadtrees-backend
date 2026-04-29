@@ -84,6 +84,14 @@ def test_process_custom_priority(test_dataset, auth_token):
 	assert data['priority'] == 5
 
 
+def test_process_priority_schema_documents_descending_priority():
+	"""OpenAPI docs should match v2_queue_positions priority DESC ordering."""
+	schema = app.openapi()
+	priority_schema = schema['components']['schemas']['ProcessRequest']['properties']['priority']
+
+	assert priority_schema['description'] == 'Task priority (5=highest, 1=lowest)'
+
+
 def test_process_invalid_priority(test_dataset, auth_token):
 	"""Test that process request rejects invalid priority values"""
 	response = client.put(
