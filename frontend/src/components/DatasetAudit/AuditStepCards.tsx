@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Card, Typography, Form, Radio, Input, Space, Tooltip, Tag, Button, Image, Collapse, message, notification, Popconfirm } from "antd";
 import { CopyOutlined, DownloadOutlined, EditOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, SaveOutlined } from "@ant-design/icons";
 import { createConditionalRule, formatAcquisitionDate } from "./auditConstants";
@@ -22,12 +23,19 @@ interface UserFlagsCardProps {
 }
 
 export function UserFlagsCard({ flags, isFlagsLoading, isUpdatingFlag, datasetId, onUpdateFlag }: UserFlagsCardProps) {
+	const latestFlagStatusesRef = useRef(new Map<number, FlagStatus>());
+
 	const formatStatus = (status: FlagStatus) => status.charAt(0).toUpperCase() + status.slice(1);
+
+	useEffect(() => {
+		latestFlagStatusesRef.current = new Map(flags.map((flag) => [flag.id, flag.status]));
+	}, [flags]);
 
 	const handleStatusChange = async (flag: DatasetFlag, newStatus: FlagStatus, successMessage: string) => {
 		try {
 			const previousStatus = flag.status;
 			await onUpdateFlag({ flag_id: flag.id, dataset_id: datasetId, new_status: newStatus });
+			latestFlagStatusesRef.current.set(flag.id, newStatus);
 
 			const key = `flag-status-${flag.id}-${Date.now()}`;
 			notification.success({
@@ -38,9 +46,15 @@ export function UserFlagsCard({ flags, isFlagsLoading, isUpdatingFlag, datasetId
 						size="small"
 						onClick={async () => {
 							try {
+								if (latestFlagStatusesRef.current.get(flag.id) !== newStatus) {
+									notification.destroy(key);
+									message.warning("Undo skipped because this issue changed again.");
+									return;
+								}
 								await onUpdateFlag({ flag_id: flag.id, dataset_id: datasetId, new_status: previousStatus });
+								latestFlagStatusesRef.current.set(flag.id, previousStatus);
 								notification.destroy(key);
-								message.success(`Issue moved back to ${formatStatus(previousStatus).toLowerCase()}`);
+								message.success(`Issue moved back to ${previousStatus}`);
 							} catch {
 								message.error("Failed to undo status change");
 							}
@@ -79,6 +93,7 @@ export function UserFlagsCard({ flags, isFlagsLoading, isUpdatingFlag, datasetId
 						description="Use this when the report has been handled and should leave the audit queue."
 						okText="Mark resolved"
 						cancelText="Cancel"
+						disabled={isUpdatingFlag}
 						onConfirm={() => handleStatusChange(flag, "resolved", "Issue resolved")}
 					>
 						<Button size="small" type="default" disabled={isUpdatingFlag}>
