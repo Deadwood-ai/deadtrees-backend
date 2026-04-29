@@ -1,4 +1,4 @@
-import { Card, Typography, Form, Radio, Input, Space, Tooltip, Tag, Button, Image, Collapse, message } from "antd";
+import { Card, Typography, Form, Radio, Input, Space, Tooltip, Tag, Button, Image, Collapse, message, notification, Popconfirm } from "antd";
 import { CopyOutlined, DownloadOutlined, EditOutlined, DeleteOutlined, CloseOutlined, PlusOutlined, SaveOutlined } from "@ant-design/icons";
 import { createConditionalRule, formatAcquisitionDate } from "./auditConstants";
 import { IDataset } from "../../types/dataset";
@@ -22,22 +22,101 @@ interface UserFlagsCardProps {
 }
 
 export function UserFlagsCard({ flags, isFlagsLoading, isUpdatingFlag, datasetId, onUpdateFlag }: UserFlagsCardProps) {
-	const handleAcknowledge = async (flagId: number) => {
+	const formatStatus = (status: FlagStatus) => status.charAt(0).toUpperCase() + status.slice(1);
+
+	const handleStatusChange = async (flag: DatasetFlag, newStatus: FlagStatus, successMessage: string) => {
 		try {
-			await onUpdateFlag({ flag_id: flagId, dataset_id: datasetId, new_status: "acknowledged" });
-			message.success("Flag acknowledged");
+			const previousStatus = flag.status;
+			await onUpdateFlag({ flag_id: flag.id, dataset_id: datasetId, new_status: newStatus });
+
+			const key = `flag-status-${flag.id}-${Date.now()}`;
+			notification.success({
+				key,
+				message: successMessage,
+				description: (
+					<Button
+						size="small"
+						onClick={async () => {
+							try {
+								await onUpdateFlag({ flag_id: flag.id, dataset_id: datasetId, new_status: previousStatus });
+								notification.destroy(key);
+								message.success(`Issue moved back to ${formatStatus(previousStatus).toLowerCase()}`);
+							} catch {
+								message.error("Failed to undo status change");
+							}
+						}}
+					>
+						Undo
+					</Button>
+				),
+				duration: 8,
+				placement: "topRight",
+			});
 		} catch {
 			message.error("Failed to update flag");
 		}
 	};
 
-	const handleResolve = async (flagId: number) => {
-		try {
-			await onUpdateFlag({ flag_id: flagId, dataset_id: datasetId, new_status: "resolved" });
-			message.success("Flag resolved");
-		} catch {
-			message.error("Failed to update flag");
+	const renderFlagActions = (flag: DatasetFlag) => {
+		if (flag.status === "open") {
+			return (
+				<Button
+					size="small"
+					type="primary"
+					onClick={() => handleStatusChange(flag, "acknowledged", "Issue acknowledged")}
+					disabled={isUpdatingFlag}
+				>
+					Acknowledge
+				</Button>
+			);
 		}
+
+		if (flag.status === "acknowledged") {
+			return (
+				<>
+					<Popconfirm
+						title="Mark this issue resolved?"
+						description="Use this when the report has been handled and should leave the audit queue."
+						okText="Mark resolved"
+						cancelText="Cancel"
+						onConfirm={() => handleStatusChange(flag, "resolved", "Issue resolved")}
+					>
+						<Button size="small" type="default" disabled={isUpdatingFlag}>
+							Mark resolved
+						</Button>
+					</Popconfirm>
+					<Button
+						size="small"
+						type="text"
+						onClick={() => handleStatusChange(flag, "open", "Issue reopened")}
+						disabled={isUpdatingFlag}
+					>
+						Reopen
+					</Button>
+				</>
+			);
+		}
+
+		return (
+			<>
+				<Button
+					size="small"
+					type="primary"
+					onClick={() => handleStatusChange(flag, "acknowledged", "Issue moved back to acknowledged")}
+					disabled={isUpdatingFlag}
+				>
+					Move to acknowledged
+				</Button>
+				<Button
+					size="small"
+					type="text"
+					onClick={() => handleStatusChange(flag, "open", "Issue reopened")}
+					disabled={isUpdatingFlag}
+				>
+					Reopen
+				</Button>
+			</>
+		);
 	};
 
 	return (
@@ -60,7 +139,7 @@ export function UserFlagsCard({ flags, isFlagsLoading, isUpdatingFlag, datasetId
 									{f.is_prediction_issue && <Tag color="default">Segmentation</Tag>}
 								</div>
 								<Tag color={f.status === "open" ? "red" : f.status === "acknowledged" ? "gold" : "green"}>
-									{f.status.charAt(0).toUpperCase() + f.status.slice(1)}
+									{formatStatus(f.status)}
 								</Tag>
 							</div>
 							{f.reporter_email && (
@@ -68,22 +147,7 @@ export function UserFlagsCard({ flags, isFlagsLoading, isUpdatingFlag, datasetId
 							)}
 							<div className="whitespace-pre-wrap text-xs text-gray-700">{f.description}</div>
 							<div className="mt-3 flex items-center gap-3">
-								<Button
-									size="small"
-									type="primary"
-									onClick={() => handleAcknowledge(f.id)}
-									disabled={f.status !== "open" || isUpdatingFlag}
-								>
-									Acknowledge
-								</Button>
-								<Button
-									size="small"
-									type="default"
-									onClick={() => handleResolve(f.id)}
-									disabled={isUpdatingFlag}
-								>
-									Resolve
-								</Button>
+								{renderFlagActions(f)}
 							</div>
 						</Card>
 					))}
