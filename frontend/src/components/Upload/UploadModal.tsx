@@ -106,6 +106,25 @@ const PrivacyLink = () => (
   </Typography.Link>
 );
 
+const PREDICTION_PROCESSING_STEPS = [
+  "deadwood_v1",
+  "treecover_v1",
+  "deadwood_treecover_combined_v2",
+];
+
+const GEOTIFF_PROCESSING_STEPS = [
+  "cog",
+  "thumbnail",
+  "metadata",
+  "geotiff",
+  ...PREDICTION_PROCESSING_STEPS,
+];
+
+const RAW_IMAGES_PROCESSING_STEPS = [
+  "odm_processing",
+  ...GEOTIFF_PROCESSING_STEPS,
+];
+
 const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey }) => {
   const pickerTypeOptions = ["Year/Month/Day", "Year/Month", "Year"];
   const [form] = Form.useForm();
@@ -274,8 +293,8 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       // Process dataset with appropriate steps based on upload type
       const processingSteps =
         uploadType === UploadType.RAW_IMAGES_ZIP
-          ? ["odm_processing", "cog", "thumbnail", "metadata", "geotiff", "deadwood_treecover_combined_v2"] // Raw images workflow includes ODM
-          : ["cog", "thumbnail", "metadata", "geotiff", "deadwood_treecover_combined_v2"]; // GeoTIFF workflow (no ODM needed)
+          ? RAW_IMAGES_PROCESSING_STEPS
+          : GEOTIFF_PROCESSING_STEPS;
 
       await processDataset(Number(uploadResponse.id), validAccessToken, processingSteps);
       track("upload_completed", {
