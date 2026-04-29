@@ -44,7 +44,7 @@ class ProcessRequest(BaseModel):
 			'Use deadwood_v1, treecover_v1, and deadwood_treecover_combined_v2 together when comparing old and new models.'
 		)
 	)
-	priority: Optional[int] = Field(default=2, ge=1, le=5, description='Task priority (1=highest, 5=lowest)')
+	priority: Optional[int] = Field(default=2, ge=1, le=5, description='Task priority (5=highest, 1=lowest)')
 
 
 @router.put('/datasets/{dataset_id}/process')
