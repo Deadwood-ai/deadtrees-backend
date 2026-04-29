@@ -113,6 +113,11 @@ task_types = ['geotiff', 'treecover_v1']
 task_types = ['geotiff', 'cog', 'thumbnail']
 ```
 
+**CRITICAL: corrected model labels**
+Do not rerun legacy replacement stages (`deadwood_v1`, `treecover_v1`) on datasets that may already have geometry corrections or audit edits. Those stages replace existing model-prediction labels by deleting old `v2_labels` rows first. If a label is referenced by `v2_geometry_corrections`, Postgres correctly rejects the delete via `v2_geometry_corrections_label_id_fkey` to preserve correction history.
+
+For combined-model backfill or comparison on corrected datasets, enqueue stages that do not replace corrected legacy labels, typically `geotiff` plus `deadwood_treecover_combined_v2`. Treat legacy-label replacement on corrected datasets as a future label-versioning or superseding design problem, not an ad-hoc rerun.
+
 ---
 
 ## Metadata Sources
