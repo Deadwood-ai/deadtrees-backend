@@ -25,11 +25,15 @@ frontend/
 # Exclude temporary files
 tmp/
 temp/
+processor/temp/
+processor/tmp/
+processor/.cache/
 .DS_Store
 Thumbs.db
 
 # Exclude test outputs
 tcd_test_output/
+processor/tcd_test_output/
 *.log
 
 # Keep only what we actually need for the container build:
