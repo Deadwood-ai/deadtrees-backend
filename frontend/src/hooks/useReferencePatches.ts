@@ -9,6 +9,32 @@ import {
   IPatchGenerationProgress,
 } from "../types/referencePatches";
 
+export type ReferencePatchCreateInput = Omit<
+  IReferencePatch,
+  "id" | "created_at" | "updated_at" | "user_id" | "status" | "utm_zone" | "epsg_code"
+> & {
+  status?: PatchStatus;
+  utm_zone?: string | null;
+  epsg_code?: number | null;
+};
+
+const getPatchStatus = (patch: Partial<IReferencePatch> & { status?: PatchStatus | null }): PatchStatus => {
+  if (patch.status) return patch.status;
+  if (patch.deadwood_validated === false || patch.forest_cover_validated === false) return "bad";
+  if (patch.deadwood_validated === true && patch.forest_cover_validated === true) return "good";
+  return "pending";
+};
+
+const normalizeReferencePatch = (patch: unknown): IReferencePatch => {
+  const normalized = patch as IReferencePatch;
+  return {
+    ...normalized,
+    status: getPatchStatus(normalized),
+    deadwood_validated: normalized.deadwood_validated ?? null,
+    forest_cover_validated: normalized.forest_cover_validated ?? null,
+  };
+};
+
 // Fetch all patches for a dataset
 export function useReferencePatches(datasetId: number | undefined, resolution?: PatchResolution) {
   return useQuery({
@@ -25,7 +51,7 @@ export function useReferencePatches(datasetId: number | undefined, resolution?: 
       const { data, error } = await query.order("patch_index");
 
       if (error) throw error;
-      return (data || []) as unknown as IReferencePatch[];
+      return (data || []).map(normalizeReferencePatch);
     },
     enabled: !!datasetId,
   });
@@ -45,7 +71,7 @@ export function useNestedPatches(parentPatchId: number | undefined) {
         .order("patch_index");
 
       if (error) throw error;
-      return (data || []) as unknown as IReferencePatch[];
+      return (data || []).map(normalizeReferencePatch);
     },
     enabled: !!parentPatchId,
   });
@@ -154,7 +180,7 @@ export function useCreateReferencePatch() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (patch: Omit<IReferencePatch, "id" | "created_at" | "updated_at" | "user_id">) => {
+    mutationFn: async (patch: ReferencePatchCreateInput) => {
       const { data, error } = await supabase
         .from("reference_patches")
         .insert({
@@ -165,7 +191,7 @@ export function useCreateReferencePatch() {
         .single();
 
       if (error) throw error;
-      return data as IReferencePatch;
+      return normalizeReferencePatch(data);
     },
     onSuccess: (data) => {
       const datasetId = (data as IReferencePatch).dataset_id;
@@ -261,7 +287,7 @@ export function useUpdatePatchLayerValidation() {
 
       if (error) throw error;
 
-      const updatedPatch = data as IReferencePatch;
+      const updatedPatch = normalizeReferencePatch(data);
 
       // Auto-propagate validation to parent patches
       // If this is a 5cm patch, update its parent 10cm patch validation
@@ -343,7 +369,7 @@ export function useUpdatePatchStatus() {
 
       if (error) throw error;
 
-      const updatedPatch = data as IReferencePatch;
+      const updatedPatch = normalizeReferencePatch(data);
 
       // If this is a 5cm patch, update its parent 10cm patch status
       if (updatedPatch.resolution_cm === 5 && updatedPatch.parent_tile_id) {
@@ -435,7 +461,7 @@ export function useUpdatePatchGeometry() {
         .single();
 
       if (error) throw error;
-      return data as IReferencePatch;
+      return normalizeReferencePatch(data);
     },
     onSuccess: (data) => {
       const datasetId = (data as IReferencePatch).dataset_id;
@@ -471,7 +497,7 @@ export function useGenerateNestedPatches() {
   return useMutation({
     mutationFn: async (parentPatch: IReferencePatch) => {
       const childResolution: PatchResolution = parentPatch.resolution_cm === 20 ? 10 : 5;
-      const childPatches: Omit<IReferencePatch, "id" | "created_at" | "updated_at" | "user_id">[] = [];
+      const childPatches: ReferencePatchCreateInput[] = [];
 
       const { bbox_minx, bbox_miny, bbox_maxx, bbox_maxy } = parentPatch;
       const midX = (bbox_minx + bbox_maxx) / 2;
@@ -526,7 +552,7 @@ export function useGenerateNestedPatches() {
         .select();
 
       if (error) throw error;
-      return data as IReferencePatch[];
+      return (data || []).map(normalizeReferencePatch);
     },
     onSuccess: (_data, parentPatch) => {
       const datasetId = parentPatch.dataset_id;

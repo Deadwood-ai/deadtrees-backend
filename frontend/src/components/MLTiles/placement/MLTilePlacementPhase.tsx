@@ -1,17 +1,14 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState } from "react";
 import { Button, Divider, List, Space, Tag, Typography, message } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { IDataset } from "../../../types/dataset";
-import { IMLTile, TileResolution } from "../../../types/mlTiles";
+import { IMLTile } from "../../../types/mlTiles";
 import { useCreateMLTile, useDeleteMLTile, useMLTiles } from "../../../hooks/useMLTiles";
 import { useDatasetAOI } from "../../../hooks/useDatasetAudit";
 import {
   polygon as turfPolygon,
   multiPolygon as turfMultiPolygon,
-  area,
-  intersect,
   centroid,
-  feature,
 } from "@turf/turf";
 import GeoJSON from "ol/format/GeoJSON";
 
@@ -63,35 +60,6 @@ export default function MLTilePlacementPhase({ dataset, onUnsavedChanges, onNavi
         : turfMultiPolygon(aoiGeoJSON.coordinates as GeoJSON.Position[][][]);
     return centroid(turfGeom).geometry.coordinates as [number, number];
   }, [aoiGeoJSON]);
-
-  const validateTilePlacement = useCallback(
-    (geometry: GeoJSON.Polygon, resolution: TileResolution) => {
-      if (!aoiGeoJSON) return { ok: true };
-
-      try {
-        const tileFeat = feature(geometry);
-        const aoiFeat = feature(aoiGeoJSON);
-
-        const overlap = intersect(tileFeat, aoiFeat);
-        if (!overlap) {
-          return { ok: false, message: "Tile does not intersect the AOI." };
-        }
-        const overlapPct = (area(overlap) / area(tileFeat)) * 100;
-        if (overlapPct < 60) {
-          return { ok: false, message: `Tile AOI overlap is only ${overlapPct.toFixed(1)}%. Minimum is 60%.` };
-        }
-        if (tiles.some((t) => t.resolution_cm === resolution && intersectsTile(t.geometry as any, geometry))) {
-          return { ok: false, message: "Tile overlaps an existing tile." };
-        }
-
-        return { ok: true, overlap: overlapPct };
-      } catch (error) {
-        console.error("Validation error:", error);
-        return { ok: false, message: `Validation error: ${error}` };
-      }
-    },
-    [aoiGeoJSON, tiles],
-  );
 
   const handleCreateTile = async () => {
     if (!aoiGeoJSON || !aoiCentroid) {
@@ -215,35 +183,4 @@ export default function MLTilePlacementPhase({ dataset, onUnsavedChanges, onNavi
       />
     </div>
   );
-}
-
-function boundingBoxFromGeoJSON(geometry: GeoJSON.Geometry): {
-  minx: number;
-  miny: number;
-  maxx: number;
-  maxy: number;
-} {
-  let minx = Infinity;
-  let miny = Infinity;
-  let maxx = -Infinity;
-  let maxy = -Infinity;
-
-  const polygons =
-    geometry.type === "Polygon" ? [geometry.coordinates] : (geometry as GeoJSON.MultiPolygon).coordinates;
-  polygons.forEach((poly) => {
-    poly[0].forEach(([x, y]) => {
-      minx = Math.min(minx, x);
-      miny = Math.min(miny, y);
-      maxx = Math.max(maxx, x);
-      maxy = Math.max(maxy, y);
-    });
-  });
-
-  return { minx, miny, maxx, maxy };
-}
-
-function intersectsTile(a: GeoJSON.Polygon, b: GeoJSON.Polygon) {
-  const ap = turfPolygon(a.coordinates as GeoJSON.Position[][]);
-  const bp = turfPolygon(b.coordinates as GeoJSON.Position[][]);
-  return !!intersect(ap, bp);
 }

@@ -164,7 +164,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
       }
 
       setUploadValidationError(null);
-      return beforeUpload(file);
+      return beforeUpload(file, []);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "File validation failed. Please choose a different file.";

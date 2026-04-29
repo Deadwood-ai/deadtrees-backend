@@ -44,7 +44,7 @@ const createDeadwoodGeotiffLayer = (year: string) => {
       ],
     },
     visible: year === "2025",
-  });
+  }) as TileLayerWebGL & { cleanup: () => void };
 
   layer.cleanup = () => {
     source.clear();

@@ -3,7 +3,6 @@ import { supabase } from "./useSupabase";
 import { useAuth } from "./useAuthProvider";
 import { useCanAudit } from "./useUserPrivileges";
 import { useMemo } from "react";
-import { IDataset } from "../types/dataset";
 
 // Update the enum type to match your backend
 export type PredictionQuality = "great" | "sentinel_ok" | "bad";
@@ -243,7 +242,6 @@ export function useSaveDatasetAOI() {
 
 // Hook to set audit lock with auto-recovery for stale locks
 export function useSetAuditLock() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -310,7 +308,6 @@ export function useSetAuditLock() {
 
 // Hook to clear audit lock
 export function useClearAuditLock() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({

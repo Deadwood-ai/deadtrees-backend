@@ -17,7 +17,7 @@ export function useDatasetLabelTypes({ datasetId, enabled = true }: UseDatasetLa
     isLoading: isLoadingDeadwood,
     error: deadwoodError,
   } = useDatasetLabels({
-    datasetId,
+    datasetId: datasetId ?? 0,
     labelData: ILabelData.DEADWOOD,
     enabled: enabled && !!datasetId,
   });
@@ -28,7 +28,7 @@ export function useDatasetLabelTypes({ datasetId, enabled = true }: UseDatasetLa
     isLoading: isLoadingForestCover,
     error: forestCoverError,
   } = useDatasetLabels({
-    datasetId,
+    datasetId: datasetId ?? 0,
     labelData: ILabelData.FOREST_COVER,
     enabled: enabled && !!datasetId,
   });

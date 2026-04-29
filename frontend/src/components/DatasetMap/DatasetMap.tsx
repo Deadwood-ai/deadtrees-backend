@@ -381,7 +381,7 @@ const DatasetMapOL = ({
               }
 
               const hoverStyle = hoveredFeature.get("hoverStyle");
-              if (hoverStyle) {
+              if (hoverStyle && hoveredFeature instanceof Feature) {
                 hoveredFeature.setStyle(hoverStyle);
               }
             } else {
@@ -394,11 +394,11 @@ const DatasetMapOL = ({
 
               vectorLayerExtendRef.current
                 ?.getSource()
-                .getFeatures()
+                ?.getFeatures()
                 .forEach((f) => f.setStyle(f.get("baseStyle")));
               vectorLayerMarkerRef.current
                 ?.getSource()
-                .getFeatures()
+                ?.getFeatures()
                 .forEach((f) => f.setStyle(f.get("baseStyle")));
             }
           };
@@ -448,8 +448,8 @@ const DatasetMapOL = ({
             map.tooltip.dispose();
           }
 
-          vectorLayerExtendRef.current?.getSource().dispose();
-          vectorLayerMarkerRef.current?.getSource().dispose();
+          vectorLayerExtendRef.current?.getSource()?.dispose();
+          vectorLayerMarkerRef.current?.getSource()?.dispose();
 
           vectorLayerExtendRef.current?.dispose();
           vectorLayerMarkerRef.current?.dispose();
@@ -466,8 +466,10 @@ const DatasetMapOL = ({
           }
 
           map.getLayers().forEach((layer) => {
-            const source = layer?.getSource?.();
-            if (source && "dispose" in source) {
+            if (!layer) return;
+
+            const source = (layer as { getSource?: () => { dispose?: () => void } | null }).getSource?.();
+            if (source?.dispose) {
               source.dispose();
             }
             map.removeLayer(layer);
@@ -476,14 +478,14 @@ const DatasetMapOL = ({
           map.getControls().clear();
           map.getInteractions().clear();
           map.getOverlays().clear();
-          map.setTarget(null);
+          map.setTarget(undefined);
 
           mapRef.current = null;
           vectorLayerExtendRef.current = null;
           vectorLayerMarkerRef.current = null;
           setMapLayersReady(false);
         } else {
-          map.setTarget(null);
+          map.setTarget(undefined);
           map.dispose();
         }
       };
@@ -495,6 +497,8 @@ const DatasetMapOL = ({
     if (mapLayersReady && vectorLayerExtendRef.current && vectorLayerMarkerRef.current && mapRef.current) {
       const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
       const vectorSourceMarker = vectorLayerMarkerRef.current.getSource();
+
+      if (!vectorSourceExtend || !vectorSourceMarker) return;
 
       vectorSourceExtend.clear();
       vectorSourceMarker.clear();
@@ -520,7 +524,9 @@ const DatasetMapOL = ({
             extentFeature.setStyle(extentStyle);
             vectorSourceExtend.addFeature(extentFeature);
 
-            const point = extentFeature.getGeometry().getInteriorPoint();
+            const extentGeometry = extentFeature.getGeometry();
+            if (!extentGeometry) return;
+            const point = extentGeometry.getInteriorPoint();
             const pointFeature = new Feature(point);
             pointFeature.setProperties({
               id: dataset.id,
@@ -539,7 +545,7 @@ const DatasetMapOL = ({
         prevZoomTriggerRef.current = filterZoomTrigger;
         if (vectorLayerExtendRef.current && mapRef.current) {
           const source = vectorLayerExtendRef.current.getSource();
-          if (source.getFeatures().length > 0) {
+          if (source && source.getFeatures().length > 0) {
             const extent = source.getExtent();
             mapRef.current.getView().fit(extent, {
               padding: [50, 50, 50, 50],
@@ -557,6 +563,8 @@ const DatasetMapOL = ({
     if (vectorLayerExtendRef.current && vectorLayerMarkerRef.current) {
       const vectorSourceExtend = vectorLayerExtendRef.current.getSource();
       const vectorSourceMarker = vectorLayerMarkerRef.current.getSource();
+
+      if (!vectorSourceExtend || !vectorSourceMarker) return;
 
       vectorSourceExtend.getFeatures().forEach((feature) => {
         const featureId = feature.get("id");

@@ -2,7 +2,7 @@
 // import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "../../hooks/useSupabase";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { ChangeEvent, useState } from "react";
 import Input from "antd/es/input/Input";
 import { Button, Form, message } from "antd";
 
@@ -10,7 +10,7 @@ const ResetPassword = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
   };
 

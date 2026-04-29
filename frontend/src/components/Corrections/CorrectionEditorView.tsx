@@ -165,7 +165,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       if (mapRef.current) {
         // Properly dispose layers and sources before disposing map
         mapRef.current.getLayers().forEach((layer) => {
-          const source = layer.getSource?.();
+          const source = (layer as { getSource?: () => { clear?: () => void; dispose?: () => void } | null }).getSource?.();
           if (source) {
             if ("clear" in source && typeof source.clear === "function") {
               source.clear();
@@ -512,8 +512,9 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       {/* Map Area */}
       <div className="relative flex-1">
         {isLoading && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/50">
-            <Spin size="large" tip="Loading..." />
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-white/50 text-gray-500">
+            <Spin size="large" />
+            <span>Loading...</span>
           </div>
         )}
 

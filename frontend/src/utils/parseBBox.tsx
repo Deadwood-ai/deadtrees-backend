@@ -1,4 +1,4 @@
-type BBox = [[number, number], [number, number]]; // [minLongitude, minLatitude, maxLongitude, maxLatitude]
+type BBox = [number, number, number, number]; // [minLongitude, minLatitude, maxLongitude, maxLatitude]
 
 function parseBBox(boxString: string): BBox | null {
   // console.log("boxString: ", boxString);

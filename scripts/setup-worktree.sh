@@ -110,6 +110,36 @@ ensure_file_from_example() {
   log "Created $(relative_to_repo_root "$target") from example"
 }
 
+ensure_file_from_shared() {
+  local relative_path="$1"
+  local target="$REPO_ROOT/$relative_path"
+  local source="$SHARED_ROOT/$relative_path"
+
+  if [[ -e "$target" ]]; then
+    return
+  fi
+
+  if [[ "$SHARED_ROOT" == "$REPO_ROOT" || ! -f "$source" ]]; then
+    log "Shared local file missing, skipping copy: $relative_path"
+    return
+  fi
+
+  mkdir -p "$(dirname "$target")"
+  cp "$source" "$target"
+  log "Copied local file from shared root: $relative_path"
+}
+
+ensure_frontend_env_profiles() {
+  ensure_file_from_shared "frontend/.env.dev.local"
+  ensure_file_from_shared "frontend/.env.prod.local"
+
+  if [[ ! -e "$REPO_ROOT/frontend/.env.dev.local" ]]; then
+    ensure_file_from_example "$REPO_ROOT/frontend/.env.dev.local" "$REPO_ROOT/frontend/.env.local.example"
+  fi
+
+  ensure_file_from_example "$REPO_ROOT/frontend/.env.local" "$REPO_ROOT/frontend/.env.local.example"
+}
+
 ensure_env_line() {
   local file="$1"
   local key="$2"
@@ -235,7 +265,7 @@ log "Shared root: $SHARED_ROOT"
 git -C "$REPO_ROOT" submodule update --init --recursive
 
 ensure_file_from_example "$REPO_ROOT/.env" "$REPO_ROOT/.env.example"
-ensure_file_from_example "$REPO_ROOT/frontend/.env.local" "$REPO_ROOT/frontend/.env.local.example"
+ensure_frontend_env_profiles
 ensure_env_line "$REPO_ROOT/.env" "COMPOSE_PROJECT_NAME" "$DEFAULT_COMPOSE_PROJECT_NAME"
 
 if [[ "$LINK_SHARED" == true ]]; then
@@ -262,6 +292,7 @@ Worktree setup complete.
 
 What this prepared:
   - repo env files
+  - frontend local/prod env profiles where available
   - stable Docker compose project name (${DEFAULT_COMPOSE_PROJECT_NAME})
   - git submodules
   - per-worktree Python CLI environment

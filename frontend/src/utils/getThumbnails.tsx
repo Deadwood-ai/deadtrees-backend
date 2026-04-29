@@ -1,4 +1,4 @@
-import { supabase } from "../useSupabase";
+import { supabase } from "../hooks/useSupabase";
 
 const getThumbnailURL = (file_name: string | null) => {
   if (!file_name) return "/assets/tree-icon.png";

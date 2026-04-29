@@ -1,4 +1,4 @@
-import { DatePicker, Select, Space } from "antd";
+import { DatePicker, Select } from "antd";
 import { Dayjs } from "dayjs";
 
 interface PickerWithTypeProps {

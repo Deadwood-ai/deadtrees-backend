@@ -30,8 +30,9 @@ export default function DatasetCorrections() {
   // Check authentication
   if (authLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Spin size="large" tip="Loading..." />
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-500">
+        <Spin size="large" />
+        <span>Loading...</span>
       </div>
     );
   }
@@ -53,8 +54,9 @@ export default function DatasetCorrections() {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Spin size="large" tip="Loading dataset..." />
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-500">
+        <Spin size="large" />
+        <span>Loading dataset...</span>
       </div>
     );
   }
