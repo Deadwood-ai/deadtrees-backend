@@ -16,6 +16,7 @@ def update_status(
 	is_thumbnail_done: Optional[bool] = None,
 	is_deadwood_done: Optional[bool] = None,
 	is_forest_cover_done: Optional[bool] = None,
+	is_combined_model_done: Optional[bool] = None,
 	is_metadata_done: Optional[bool] = None,
 	is_odm_done: Optional[bool] = None,
 	is_audited: Optional[bool] = None,
@@ -35,6 +36,7 @@ def update_status(
 	    is_thumbnail_done (bool, optional): Thumbnail generation completion status
 	    is_deadwood_done (bool, optional): Deadwood segmentation completion status
 	    is_forest_cover_done (bool, optional): Forest cover completion status
+	    is_combined_model_done (bool, optional): Combined model completion status
 	    is_metadata_done (bool, optional): Metadata processing completion status
 	    is_odm_done (bool, optional): ODM processing completion status
 	    is_audited (bool, optional): Audit completion status
@@ -57,6 +59,8 @@ def update_status(
 			update_data['is_deadwood_done'] = is_deadwood_done
 		if is_forest_cover_done is not None:
 			update_data['is_forest_cover_done'] = is_forest_cover_done
+		if is_combined_model_done is not None:
+			update_data['is_combined_model_done'] = is_combined_model_done
 		if is_metadata_done is not None:
 			update_data['is_metadata_done'] = is_metadata_done
 		if is_odm_done is not None:

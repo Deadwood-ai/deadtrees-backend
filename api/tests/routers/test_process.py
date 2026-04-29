@@ -2,11 +2,20 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.src.server import app
+from api.src.routers.process import _task_type_to_status_flags
 from shared.db import use_client, login
 from shared.settings import settings
 from shared.models import TaskTypeEnum, LicenseEnum, PlatformEnum, DatasetAccessEnum, StatusEnum
 
 client = TestClient(app)
+
+
+def test_combined_task_maps_to_dedicated_and_legacy_status_flags():
+	assert _task_type_to_status_flags(TaskTypeEnum.deadwood_treecover_combined_v2) == (
+		'is_deadwood_done',
+		'is_forest_cover_done',
+		'is_combined_model_done',
+	)
 
 
 @pytest.fixture(scope='function')
@@ -353,6 +362,7 @@ def test_rerun_combined_task_resets_both_prediction_flags(test_dataset, auth_tok
 				'current_status': StatusEnum.idle,
 				'is_deadwood_done': True,
 				'is_forest_cover_done': True,
+				'is_combined_model_done': True,
 			}
 		).eq('dataset_id', test_dataset).execute()
 
@@ -371,6 +381,7 @@ def test_rerun_combined_task_resets_both_prediction_flags(test_dataset, auth_tok
 		assert status['error_message'] is None
 		assert status['is_deadwood_done'] is False
 		assert status['is_forest_cover_done'] is False
+		assert status['is_combined_model_done'] is False
 
 
 def test_rerun_multiple_old_queue_items(test_dataset, auth_token, test_user):

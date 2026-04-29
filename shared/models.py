@@ -182,6 +182,7 @@ class Status(BaseModel):
 	is_thumbnail_done: bool = False
 	is_deadwood_done: bool = False
 	is_forest_cover_done: bool = False
+	is_combined_model_done: bool = False
 	is_metadata_done: bool = False
 	is_odm_done: bool = False
 	is_audited: bool = False

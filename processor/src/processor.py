@@ -2,7 +2,7 @@ import shutil
 from pathlib import Path
 from processor.src.process_geotiff import process_geotiff
 from processor.src.process_odm import process_odm
-from shared.models import COMBINED_MODEL_CONFIG, LabelDataEnum, LabelSourceEnum, QueueTask, TaskTypeEnum, StatusEnum
+from shared.models import QueueTask, TaskTypeEnum, StatusEnum
 from shared.settings import settings
 from shared.db import use_client, login, login_verified, verify_token
 from shared.status import update_status
@@ -20,25 +20,6 @@ from shared.logging import LogContext, LogCategory, UnifiedLogger, SupabaseHandl
 logger = UnifiedLogger(__name__)
 logger.add_supabase_handler(SupabaseHandler())
 
-DEADWOOD_V1_MODEL_CONFIG = {
-	'module': 'deadwood_segmentation_v1_moehring',
-	'checkpoint_name': 'segformer_b5_full_epoch_100.safetensors',
-}
-TREECOVER_V1_MODEL_CONFIG = {
-	'module': 'treecover_segmentation_oam_tcd',
-	'checkpoint_name': 'restor/tcd-segformer-mit-b5',
-}
-
-MODEL_STAGE_LABEL_REQUIREMENTS = {
-	TaskTypeEnum.deadwood_v1: ((LabelDataEnum.deadwood, DEADWOOD_V1_MODEL_CONFIG),),
-	TaskTypeEnum.treecover_v1: ((LabelDataEnum.forest_cover, TREECOVER_V1_MODEL_CONFIG),),
-	TaskTypeEnum.deadwood_treecover_combined_v2: (
-		(LabelDataEnum.deadwood, COMBINED_MODEL_CONFIG),
-		(LabelDataEnum.forest_cover, COMBINED_MODEL_CONFIG),
-	),
-}
-
-
 # Maps each task type to its corresponding is_*_done flag and human-readable stage name.
 # Used by crash detection to determine exactly which stage a previous run crashed during.
 PIPELINE_STAGE_MAP = [
@@ -51,7 +32,7 @@ PIPELINE_STAGE_MAP = [
 	(TaskTypeEnum.treecover_v1, 'is_forest_cover_done', 'forest_cover_segmentation'),
 	(
 		TaskTypeEnum.deadwood_treecover_combined_v2,
-		('is_deadwood_done', 'is_forest_cover_done'),
+		'is_combined_model_done',
 		'deadwood_treecover_combined_segmentation',
 	),
 ]
@@ -59,46 +40,6 @@ PIPELINE_STAGE_MAP = [
 
 def _stage_done_flags(done_flags: str | tuple[str, ...]) -> tuple[str, ...]:
 	return (done_flags,) if isinstance(done_flags, str) else done_flags
-
-
-def _model_label_key(label_data: LabelDataEnum | str, model_config: dict) -> tuple[str, str | None, str | None]:
-	return (
-		label_data.value if isinstance(label_data, LabelDataEnum) else label_data,
-		model_config.get('module'),
-		model_config.get('checkpoint_name'),
-	)
-
-
-def _model_stage_complete(
-	task_type: TaskTypeEnum,
-	completed_model_labels: set[tuple[str, str | None, str | None]] | None,
-) -> bool | None:
-	requirements = MODEL_STAGE_LABEL_REQUIREMENTS.get(task_type)
-	if not requirements or completed_model_labels is None:
-		return None
-	return all(_model_label_key(label_data, config) in completed_model_labels for label_data, config in requirements)
-
-
-def get_completed_model_labels(token: str, dataset_id: int) -> set[tuple[str, str | None, str | None]]:
-	"""Return completed model-prediction label variants for a dataset.
-
-	The shared status flags only say whether deadwood/tree-cover outputs exist.
-	They cannot distinguish legacy v1 predictions from the combined v2 model, so
-	crash recovery must also inspect model_config before dropping stale queue rows.
-	"""
-	with use_client(token) as client:
-		response = (
-			client.table(settings.labels_table)
-			.select('label_data,model_config')
-			.eq('dataset_id', dataset_id)
-			.eq('label_source', LabelSourceEnum.model_prediction.value)
-			.execute()
-		)
-
-	return {
-		_model_label_key(label['label_data'], label.get('model_config') or {})
-		for label in response.data
-	}
 
 
 def refresh_processor_token(task: QueueTask, fallback_token: str | None = None) -> str:
@@ -111,11 +52,7 @@ def refresh_processor_token(task: QueueTask, fallback_token: str | None = None) 
 		raise AuthenticationError('Invalid processor token', token=fallback_token, task_id=task.id)
 
 
-def detect_crashed_stage(
-	status_data: dict,
-	task_types: list,
-	completed_model_labels: set[tuple[str, str | None, str | None]] | None = None,
-) -> str:
+def detect_crashed_stage(status_data: dict, task_types: list) -> str:
 	"""Determine which pipeline stage a previous crash occurred during.
 
 	Walks the pipeline in order and returns the first stage that was requested
@@ -129,18 +66,12 @@ def detect_crashed_stage(
 		str: Human-readable stage name where the crash occurred
 	"""
 	for task_type, done_flags, stage_name in PIPELINE_STAGE_MAP:
-		model_complete = _model_stage_complete(task_type, completed_model_labels)
-		if task_type in task_types and model_complete is False:
-			return stage_name
 		if task_type in task_types and not all(status_data.get(flag, False) for flag in _stage_done_flags(done_flags)):
 			return stage_name
 	return 'unknown'
 
 
-def get_completed_stages(
-	status_data: dict,
-	completed_model_labels: set[tuple[str, str | None, str | None]] | None = None,
-) -> list[str]:
+def get_completed_stages(status_data: dict) -> list[str]:
 	"""Get list of pipeline stages that completed successfully before the crash.
 
 	Args:
@@ -151,25 +82,13 @@ def get_completed_stages(
 	"""
 	completed = []
 	for task_type, done_flags, stage_name in PIPELINE_STAGE_MAP:
-		model_complete = _model_stage_complete(task_type, completed_model_labels)
-		if model_complete is False:
-			continue
 		if all(status_data.get(flag, False) for flag in _stage_done_flags(done_flags)):
 			completed.append(stage_name)
 	return completed
 
 
-def are_requested_stages_complete(
-	status_data: dict,
-	task_types: list,
-	completed_model_labels: set[tuple[str, str | None, str | None]] | None = None,
-) -> bool:
+def are_requested_stages_complete(status_data: dict, task_types: list) -> bool:
 	"""Return True when all requested pipeline stages are already marked complete."""
-	for task_type in task_types:
-		model_complete = _model_stage_complete(task_type, completed_model_labels)
-		if model_complete is False:
-			return False
-
 	requested = [
 		flag
 		for task_type, done_flags, _ in PIPELINE_STAGE_MAP
@@ -177,7 +96,6 @@ def are_requested_stages_complete(
 		for flag in _stage_done_flags(done_flags)
 	]
 	return bool(requested) and all(status_data.get(done_flag, False) for done_flag in requested)
-
 
 
 def get_next_task(token: str) -> QueueTask:
@@ -584,9 +502,8 @@ def background_process():
 			should_mark_error = True
 			if status_resp.data:
 				status = status_resp.data[0]
-				completed_model_labels = get_completed_model_labels(token, active_task.dataset_id)
-				completed = get_completed_stages(status, completed_model_labels)
-				if are_requested_stages_complete(status, active_task.task_types, completed_model_labels):
+				completed = get_completed_stages(status)
+				if are_requested_stages_complete(status, active_task.task_types):
 					logger.info(
 						f'Removing stale completed queue task {active_task.id} for dataset {active_task.dataset_id}',
 						LogContext(
@@ -600,10 +517,10 @@ def background_process():
 					crashed_stage = 'completed'
 					error_msg = ''
 				elif status['current_status'] != 'idle':
-					crashed_stage = detect_crashed_stage(status, active_task.task_types, completed_model_labels)
+					crashed_stage = detect_crashed_stage(status, active_task.task_types)
 					error_msg = f'Processing container crashed during {crashed_stage}. Completed: {completed}'
 				elif completed:
-					crashed_stage = detect_crashed_stage(status, active_task.task_types, completed_model_labels)
+					crashed_stage = detect_crashed_stage(status, active_task.task_types)
 					error_msg = f'Processing container crashed after completing {completed} and before starting {crashed_stage}.'
 				else:
 					crashed_stage = 'startup'
@@ -673,9 +590,8 @@ def background_process():
 			status = status_resp.data[0]
 			if status['current_status'] != 'idle':
 				# Previous crash detected - current_status is still set to a processing stage
-				completed_model_labels = get_completed_model_labels(token, task.dataset_id)
-				crashed_stage = detect_crashed_stage(status, task.task_types, completed_model_labels)
-				completed = get_completed_stages(status, completed_model_labels)
+				crashed_stage = detect_crashed_stage(status, task.task_types)
+				completed = get_completed_stages(status)
 				error_msg = f'Processing container crashed during {crashed_stage}. Completed: {completed}'
 
 				logger.warning(

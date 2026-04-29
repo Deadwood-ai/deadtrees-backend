@@ -40,7 +40,12 @@ def process_deadwood_treecover_combined_v2(task: QueueTask, token: str, temp_dir
         )
         raise DatasetError(f'Error fetching dataset: {e}')
 
-    update_status(token, dataset_id=ortho.dataset_id, current_status=StatusEnum.deadwood_segmentation)
+    update_status(
+        token,
+        dataset_id=ortho.dataset_id,
+        current_status=StatusEnum.deadwood_segmentation,
+        is_combined_model_done=False,
+    )
     logger.info(
         'Starting combined deadwood+treecover segmentation',
         LogContext(category=LogCategory.DEADWOOD, dataset_id=task.dataset_id, user_id=user.id, token=token),
@@ -84,6 +89,7 @@ def process_deadwood_treecover_combined_v2(task: QueueTask, token: str, temp_dir
             current_status=StatusEnum.idle,
             is_deadwood_done=True,
             is_forest_cover_done=True,
+            is_combined_model_done=True,
         )
         logger.info(
             'Combined segmentation completed successfully',

@@ -314,6 +314,7 @@ def test_all_status_completion_flags_exist(auth_token, test_user):
 				'is_thumbnail_done': True,
 				'is_deadwood_done': True,
 				'is_forest_cover_done': True,
+				'is_combined_model_done': True,
 				'is_metadata_done': True,
 				'is_odm_done': True,
 			}
@@ -330,6 +331,7 @@ def test_all_status_completion_flags_exist(auth_token, test_user):
 				'is_thumbnail_done',
 				'is_deadwood_done',
 				'is_forest_cover_done',
+				'is_combined_model_done',
 				'is_metadata_done',
 				'is_odm_done',
 			]
