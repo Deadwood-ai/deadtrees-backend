@@ -12,7 +12,6 @@ export const GEOTIFF_PROCESSING_STEPS: ProcessingStep[] = [
   { key: "cog", label: "Optimizing Data", description: "Converting to optimized format for visualization" },
   { key: "deadwood", label: "AI Analysis", description: "Running AI analysis for deadwood detection" },
   { key: "treecover", label: "Tree Cover Analysis", description: "Running AI analysis for tree cover segmentation" },
-  { key: "combined_model", label: "Combined AI Analysis", description: "Running combined deadwood and tree cover model" },
 ];
 
 export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
@@ -24,8 +23,19 @@ export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
   { key: "cog", label: "Optimizing Data", description: "Converting to optimized format for visualization" },
   { key: "deadwood", label: "AI Analysis", description: "Running AI analysis for deadwood detection" },
   { key: "treecover", label: "Tree Cover Analysis", description: "Running AI analysis for tree cover segmentation" },
-  { key: "combined_model", label: "Combined AI Analysis", description: "Running combined deadwood and tree cover model" },
 ];
+
+const COMBINED_MODEL_STEP: ProcessingStep = {
+  key: "combined_model",
+  label: "Combined AI Analysis",
+  description: "Running combined deadwood and tree cover model",
+};
+
+const COMBINED_MODEL_STATUS = "deadwood_treecover_combined_segmentation";
+
+function isOdmWorkflow(dataset: DatasetProgress): boolean {
+  return dataset.file_name?.toLowerCase().endsWith(".zip") || false;
+}
 
 export interface DatasetProgress {
   file_name?: string;
@@ -47,50 +57,46 @@ export interface DatasetProgress {
   has_valid_acquisition_date?: boolean | null;
 }
 
-/**
- * Smart detection for when deadwood processing is actually complete
- * even when is_deadwood_done = false (no deadwood found case)
- */
 function isDeadwoodProcessingComplete(dataset: DatasetProgress): boolean {
-  // If is_deadwood_done is already true, processing is definitely complete
-  if (dataset.is_deadwood_done) {
-    return true;
-  }
+  return !!dataset.is_deadwood_done;
+}
 
-  // If all previous steps are done, status is idle, and no errors,
-  // assume deadwood processing completed (just found no results)
-  const odmComplete = dataset.is_odm_done === undefined || dataset.is_odm_done;
+function isTreecoverProcessingComplete(dataset: DatasetProgress): boolean {
+  return !!dataset.is_forest_cover_done;
+}
+
+export function isLegacyPredictionProcessingComplete(
+  dataset: DatasetProgress,
+): boolean {
+  return (
+    isDeadwoodProcessingComplete(dataset) &&
+    isTreecoverProcessingComplete(dataset)
+  );
+}
+
+export function isPredictionProcessingComplete(
+  dataset: DatasetProgress,
+): boolean {
+  return (
+    isLegacyPredictionProcessingComplete(dataset) ||
+    !!dataset.is_combined_model_done
+  );
+}
+
+export function isDatasetProcessingComplete(dataset: DatasetProgress): boolean {
+  const odmComplete = !isOdmWorkflow(dataset) || dataset.is_odm_done;
+  const hasActiveProcessingStatus =
+    !!dataset.current_status && dataset.current_status !== "idle";
+
   return !!(
+    !dataset.has_error &&
+    !hasActiveProcessingStatus &&
     dataset.is_upload_done &&
     odmComplete &&
     dataset.is_ortho_done &&
     dataset.is_metadata_done &&
     dataset.is_cog_done &&
-    !dataset.has_error &&
-    dataset.current_status === "idle"
-  );
-}
-
-/**
- * Smart detection for when treecover processing is actually complete
- * even when is_forest_cover_done = false (no tree cover found case)
- */
-function isTreecoverProcessingComplete(dataset: DatasetProgress): boolean {
-  // If is_forest_cover_done is already true, processing is definitely complete
-  if (dataset.is_forest_cover_done) {
-    return true;
-  }
-
-  // If all previous steps are done, status is idle, and no errors,
-  // assume treecover processing completed (just found no results)
-  return !!(
-    dataset.is_upload_done &&
-    dataset.is_ortho_done &&
-    dataset.is_metadata_done &&
-    dataset.is_cog_done &&
-    isDeadwoodProcessingComplete(dataset) &&
-    !dataset.has_error &&
-    dataset.current_status === "idle"
+    isPredictionProcessingComplete(dataset)
   );
 }
 
@@ -102,8 +108,32 @@ export function calculateProcessingProgress(dataset: DatasetProgress): {
   isComplete: boolean;
 } {
   // Determine if this is an ODM workflow (raw images) based on file extension
-  const isOdmWorkflow = dataset.file_name?.toLowerCase().endsWith(".zip") || false;
-  const steps = isOdmWorkflow ? RAW_IMAGES_PROCESSING_STEPS : GEOTIFF_PROCESSING_STEPS;
+  const isOdmDataset = isOdmWorkflow(dataset);
+  const hasExplicitLegacyPredictionOutput =
+    !!dataset.is_deadwood_done || !!dataset.is_forest_cover_done;
+  const includeCombinedModelStep =
+    dataset.is_combined_model_done ||
+    dataset.current_status === COMBINED_MODEL_STATUS;
+  const useCombinedModelOnly =
+    includeCombinedModelStep && !hasExplicitLegacyPredictionOutput;
+  const steps = useCombinedModelOnly
+    ? [
+        ...(isOdmDataset
+          ? RAW_IMAGES_PROCESSING_STEPS
+          : GEOTIFF_PROCESSING_STEPS
+        ).slice(0, -2),
+        COMBINED_MODEL_STEP,
+      ]
+    : includeCombinedModelStep
+      ? [
+          ...(isOdmDataset
+            ? RAW_IMAGES_PROCESSING_STEPS
+            : GEOTIFF_PROCESSING_STEPS),
+          COMBINED_MODEL_STEP,
+        ]
+      : isOdmDataset
+        ? RAW_IMAGES_PROCESSING_STEPS
+        : GEOTIFF_PROCESSING_STEPS;
   const totalSteps = steps.length;
 
   // If there's an error, return error state
@@ -117,17 +147,29 @@ export function calculateProcessingProgress(dataset: DatasetProgress): {
     };
   }
 
-  // Check completion status for each step with smart detection
-  const stepCompletions = [
+  const baseStepCompletions = [
     dataset.is_upload_done || false,
-    ...(isOdmWorkflow ? [dataset.is_odm_done || false] : []), // ODM step only for raw images
+    ...(isOdmDataset ? [dataset.is_odm_done || false] : []), // ODM step only for raw images
     dataset.is_ortho_done || false,
     dataset.is_metadata_done || false,
     dataset.is_cog_done || false,
-    isDeadwoodProcessingComplete(dataset), // Smart deadwood completion check
-    isTreecoverProcessingComplete(dataset), // Smart treecover completion check
-    dataset.is_combined_model_done || false,
   ];
+
+  // Check completion status for each step.
+  const stepCompletions = useCombinedModelOnly
+    ? [...baseStepCompletions, dataset.is_combined_model_done || false]
+    : includeCombinedModelStep
+      ? [
+          ...baseStepCompletions,
+          isDeadwoodProcessingComplete(dataset),
+          isTreecoverProcessingComplete(dataset),
+          dataset.is_combined_model_done || false,
+        ]
+      : [
+          ...baseStepCompletions,
+          isDeadwoodProcessingComplete(dataset),
+          isTreecoverProcessingComplete(dataset),
+        ];
 
   // Find the current step (first incomplete step)
   const currentStep = stepCompletions.findIndex((completed) => !completed);
