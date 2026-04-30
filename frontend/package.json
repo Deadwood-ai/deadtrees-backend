@@ -33,7 +33,7 @@
     "kompas": "^1.0.0",
     "localforage": "^1.10.0",
     "lodash": "^4.18.1",
-    "match-sorter": "^6.3.4",
+    "match-sorter": "^8.3.0",
     "ol": "^10.4.0",
     "ol-mapbox-style": "^13.4.1",
     "polygon-clipping": "0.15.7",
