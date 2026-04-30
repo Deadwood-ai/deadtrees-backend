@@ -90,6 +90,13 @@ gh pr list --repo Deadwood-ai/deadtrees
 gh pr view PR_NUMBER --repo Deadwood-ai/deadtrees
 ```
 
+### Pull Request Titles
+- PR titles must pass `.github/workflows/pr-title-check.yml`.
+- Use Conventional Commit style: `type(scope): short summary`.
+- Allowed types: `feat`, `fix`, `docs`, `chore`, `refactor`, `perf`, `test`, `build`, `ci`, `revert`.
+- Do not prefix titles with agent markers such as `[codex]`; those fail the title check.
+- Good example: `fix(frontend): show combined forest cover layer`.
+
 ## 🏗️ **DEADWOOD PROJECT STRUCTURE**
 
 ### Main Repository
@@ -206,4 +213,4 @@ gh auth refresh -s repo,project,read:project,workflow
 - **Project board visibility**: Use the project board for sprint planning
 - **CLI automation**: Leverage GitHub CLI for repetitive tasks
 - **Cross-reference**: Link issues to commits, PRs, and other issues
-- **Milestone tracking**: Use milestones for release planning 
+- **Milestone tracking**: Use milestones for release planning
