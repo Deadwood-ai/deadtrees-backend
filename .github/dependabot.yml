@@ -25,6 +25,20 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@vitejs/plugin-react"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "antd"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@ant-design/icons"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@geoapify/geocoder-autocomplete"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "unzipit"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-router"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-router-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
 
       # Tooling majors should be reviewed as explicit maintenance work.
       - dependency-name: "vitest"
