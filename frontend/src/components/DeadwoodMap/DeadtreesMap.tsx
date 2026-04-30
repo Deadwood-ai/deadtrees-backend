@@ -1380,7 +1380,7 @@ const DeadtreesMap = () => {
         </div>
 
         {/* Top Right - Layer Controls (desktop) */}
-        <div className="fixed right-40 top-24 z-50 hidden md:block">
+        <div className="absolute right-4 top-24 z-50 hidden md:block">
           <LayerControlPanel
             mapStyle={DeadwoodMapStyle}
             onMapStyleChange={handleMapStyleChange}
