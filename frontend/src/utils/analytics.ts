@@ -1,7 +1,9 @@
 import { User } from "@supabase/supabase-js";
 import posthog from "posthog-js";
 
-const POSTHOG_PROJECT_KEY = import.meta.env.VITE_POSTHOG_PROJECT_KEY as string | undefined;
+const POSTHOG_PROJECT_KEY = import.meta.env.VITE_POSTHOG_PROJECT_KEY as
+  | string
+  | undefined;
 let hasInitializedPostHog = false;
 let initializedPostHogMode: "limited" | "accepted" | null = null;
 
@@ -68,6 +70,20 @@ export interface AnalyticsEventPropertiesMap {
   };
   sign_in_completed: AnalyticsBaseProperties & {
     auth_path: string;
+  };
+  password_reset_link_invalid: AnalyticsBaseProperties & {
+    auth_path: string;
+    error_code?: string;
+  };
+  password_reset_submitted: AnalyticsBaseProperties & {
+    auth_path: string;
+  };
+  password_reset_completed: AnalyticsBaseProperties & {
+    auth_path: string;
+  };
+  password_reset_failed: AnalyticsBaseProperties & {
+    auth_path: string;
+    failure_reason: string;
   };
   upload_started: AnalyticsBaseProperties & {
     upload_type: string;
@@ -186,7 +202,9 @@ type EssentialAnalyticsProperty =
   | "filter_type"
   | "filter_value"
   | "interaction_type"
-  | "search_length";
+  | "search_length"
+  | "error_code"
+  | "url_path";
 
 const ESSENTIAL_PROPERTY_KEYS: EssentialAnalyticsProperty[] = [
   "page",
@@ -217,11 +235,17 @@ const ESSENTIAL_PROPERTY_KEYS: EssentialAnalyticsProperty[] = [
   "filter_value",
   "interaction_type",
   "search_length",
+  "error_code",
+  "url_path",
 ];
 
 const ESSENTIAL_EVENTS = new Set<AnalyticsEventName>([
   "sign_up_completed",
   "sign_in_completed",
+  "password_reset_link_invalid",
+  "password_reset_submitted",
+  "password_reset_completed",
+  "password_reset_failed",
   "upload_started",
   "upload_completed",
   "upload_failed",
@@ -262,12 +286,130 @@ const getCurrentPath = (): string => {
   return `${window.location.pathname}${window.location.search}`;
 };
 
+const SENSITIVE_QUERY_PARAMS = new Set([
+  "access_token",
+  "api_key",
+  "auth_token",
+  "code",
+  "email",
+  "key",
+  "otp",
+  "password",
+  "refresh_token",
+  "secret",
+  "session",
+  "token",
+]);
+
+const URL_PROPERTY_KEYS = new Set([
+  "$current_url",
+  "$initial_current_url",
+  "$initial_referrer",
+  "$referrer",
+  "$session_entry_url",
+  "url",
+]);
+
+const getAnalyticsOrigin = (): string => {
+  if (typeof window === "undefined") return "https://deadtrees.earth";
+  return window.location.origin || "https://deadtrees.earth";
+};
+
+const hasUrlScheme = (url: string): boolean =>
+  /^[a-z][a-z0-9+.-]*:\/\//i.test(url);
+
+const isSensitiveQueryParam = (paramName: string): boolean => {
+  const normalizedName = paramName.toLowerCase();
+  return (
+    SENSITIVE_QUERY_PARAMS.has(normalizedName) ||
+    normalizedName.endsWith("_token")
+  );
+};
+
+export const sanitizeAnalyticsUrl = (url: string): string => {
+  const urlWithoutHash = url.split("#")[0] || "/";
+
+  try {
+    const isAbsoluteUrl = hasUrlScheme(urlWithoutHash);
+    const parsedUrl = new URL(urlWithoutHash, getAnalyticsOrigin());
+    parsedUrl.hash = "";
+
+    parsedUrl.searchParams.forEach((_value, key) => {
+      if (isSensitiveQueryParam(key)) {
+        parsedUrl.searchParams.set(key, "[redacted]");
+      }
+    });
+
+    const pathWithSearch = `${parsedUrl.pathname}${parsedUrl.search}`;
+    return isAbsoluteUrl
+      ? `${parsedUrl.origin}${pathWithSearch}`
+      : pathWithSearch;
+  } catch {
+    return urlWithoutHash;
+  }
+};
+
+const getAnalyticsPathname = (url: string): string => {
+  try {
+    return new URL(sanitizeAnalyticsUrl(url), getAnalyticsOrigin()).pathname;
+  } catch {
+    return "/";
+  }
+};
+
+const getAbsoluteAnalyticsUrl = (url: string): string => {
+  try {
+    return new URL(sanitizeAnalyticsUrl(url), getAnalyticsOrigin()).toString();
+  } catch {
+    return getAnalyticsOrigin();
+  }
+};
+
+type PostHogCapturePayload = {
+  event?: string;
+  properties?: Record<string, unknown>;
+  $set?: Record<string, unknown>;
+  $set_once?: Record<string, unknown>;
+};
+
+const sanitizeUrlProperties = (
+  properties: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined => {
+  if (!properties) return properties;
+
+  return Object.fromEntries(
+    Object.entries(properties).map(([key, value]) => {
+      if (URL_PROPERTY_KEYS.has(key) && typeof value === "string") {
+        return [key, sanitizeAnalyticsUrl(value)];
+      }
+
+      return [key, value];
+    }),
+  );
+};
+
+export const sanitizePostHogCapture = <T extends PostHogCapturePayload | null>(
+  capture: T,
+): T => {
+  if (!capture) return capture;
+
+  return {
+    ...capture,
+    properties: sanitizeUrlProperties(capture.properties),
+    $set: sanitizeUrlProperties(capture.$set),
+    $set_once: sanitizeUrlProperties(capture.$set_once),
+  };
+};
+
 const getCurrentPage = (): string => {
   if (typeof window === "undefined") return "/";
   return window.location.pathname;
 };
 
-export const deriveUserSegment = (isLoggedIn: boolean, isCoreTeam: boolean): UserSegment => {
+export const deriveUserSegment = (
+  isLoggedIn: boolean,
+  isCoreTeam: boolean,
+): UserSegment => {
   if (!isLoggedIn) return "visitor";
   return isCoreTeam ? "core_team" : "contributor";
 };
@@ -287,7 +429,10 @@ export const isConsentNeeded = (): boolean => {
   if (!storage) return true;
 
   const storedVersion = storage.getItem(COOKIE_CONSENT_VERSION_KEY);
-  return !storage.getItem(COOKIE_CONSENT_KEY) || storedVersion !== COOKIE_CONSENT_VERSION;
+  return (
+    !storage.getItem(COOKIE_CONSENT_KEY) ||
+    storedVersion !== COOKIE_CONSENT_VERSION
+  );
 };
 
 export const canCaptureEvents = (): boolean => {
@@ -330,8 +475,9 @@ export const initializePostHog = (consent: string | null = null): void => {
     api_host: "https://eu.i.posthog.com",
     persistence: mode === "accepted" ? "cookie" : "memory",
     autocapture: mode === "accepted",
-    capture_pageview: true,
-    capture_pageleave: mode === "accepted",
+    capture_pageview: false,
+    capture_pageleave: false,
+    before_send: sanitizePostHogCapture,
   } as const;
 
   // Persisted opt-in/out flags survive reloads, so they are not a safe proxy for whether
@@ -351,7 +497,10 @@ export const initializePostHog = (consent: string | null = null): void => {
     posthog.opt_in_capturing();
   } else if (consent === "rejected" && !posthog.has_opted_out_capturing()) {
     posthog.opt_out_capturing();
-  } else if (consent !== "accepted" && (posthog.has_opted_in_capturing() || posthog.has_opted_out_capturing())) {
+  } else if (
+    consent !== "accepted" &&
+    (posthog.has_opted_in_capturing() || posthog.has_opted_out_capturing())
+  ) {
     posthog.clear_opt_in_out_capturing();
   }
 };
@@ -359,17 +508,25 @@ export const initializePostHog = (consent: string | null = null): void => {
 export const trackPageView = (url: string): void => {
   if (!isPostHogAvailable()) return;
 
+  const safeUrl = sanitizeAnalyticsUrl(url);
+  const pageviewProperties = {
+    $current_url: getAbsoluteAnalyticsUrl(safeUrl),
+    url: safeUrl,
+    url_path: getAnalyticsPathname(safeUrl),
+  };
+
   if (canCaptureEvents()) {
-    posthog.capture("$pageview", { url });
+    posthog.capture("$pageview", pageviewProperties);
     return;
   }
 
-  posthog.capture("$pageview", {
-    url_path: new URL(url, typeof window !== "undefined" ? window.location.origin : "https://deadtrees.earth").pathname,
-  });
+  posthog.capture("$pageview", sanitizeEventProperties(pageviewProperties));
 };
 
-export const identifyUser = (user: User | null, options?: { isCoreTeam?: boolean }): void => {
+export const identifyUser = (
+  user: User | null,
+  options?: { isCoreTeam?: boolean },
+): void => {
   if (!isPostHogAvailable() || !user) return;
 
   const userSegment = deriveUserSegment(true, options?.isCoreTeam === true);
@@ -396,13 +553,16 @@ export const identifyUser = (user: User | null, options?: { isCoreTeam?: boolean
 export const sanitizeEventProperties = (
   properties: Record<string, unknown>,
 ): Record<string, unknown> => {
-  return ESSENTIAL_PROPERTY_KEYS.reduce<Record<string, unknown>>((safeProps, key) => {
-    const value = properties[key];
-    if (value !== undefined && value !== null && value !== "") {
-      safeProps[key] = value;
-    }
-    return safeProps;
-  }, {});
+  return ESSENTIAL_PROPERTY_KEYS.reduce<Record<string, unknown>>(
+    (safeProps, key) => {
+      const value = properties[key];
+      if (value !== undefined && value !== null && value !== "") {
+        safeProps[key] = value;
+      }
+      return safeProps;
+    },
+    {},
+  );
 };
 
 type EventContext = {
@@ -436,7 +596,10 @@ export const trackEvent = (
   if (!isPostHogAvailable()) return;
   if (!isEssential && !canCaptureEvents()) return;
 
-  const payload = isEssential && !hasAcceptedCookies() ? sanitizeEventProperties(properties) : properties;
+  const payload =
+    isEssential && !hasAcceptedCookies()
+      ? sanitizeEventProperties(properties)
+      : properties;
   posthog.capture(eventName, payload);
 };
 
@@ -456,30 +619,37 @@ export const trackAuthCompletion = (
     authPath?: string;
   } = {},
 ): void => {
-  trackAppEvent(
-    authEvent,
-    {
-      auth_path: options.authPath ?? getCurrentPath(),
-      source_surface: "auth",
-      user_segment: deriveUserSegment(true, options.isCoreTeam === true),
-      is_logged_in: true,
-    } as AnalyticsEventPropertiesMap[typeof authEvent],
-  );
+  trackAppEvent(authEvent, {
+    auth_path: options.authPath ?? getCurrentPath(),
+    source_surface: "auth",
+    user_segment: deriveUserSegment(true, options.isCoreTeam === true),
+    is_logged_in: true,
+  } as AnalyticsEventPropertiesMap[typeof authEvent]);
 };
 
-export const trackEmailLinkClick = (campaign: string, linkType: string): void => {
+export const trackEmailLinkClick = (
+  campaign: string,
+  linkType: string,
+): void => {
   trackEvent(
     "email_link_clicked",
     {
       campaign,
       linkType,
       page: getCurrentPage(),
-      ...(hasAcceptedCookies() && typeof window !== "undefined" && {
-        referrer: document.referrer,
-        utm_source: new URLSearchParams(window.location.search).get("utm_source"),
-        utm_medium: new URLSearchParams(window.location.search).get("utm_medium"),
-        utm_campaign: new URLSearchParams(window.location.search).get("utm_campaign"),
-      }),
+      ...(hasAcceptedCookies() &&
+        typeof window !== "undefined" && {
+          referrer: document.referrer,
+          utm_source: new URLSearchParams(window.location.search).get(
+            "utm_source",
+          ),
+          utm_medium: new URLSearchParams(window.location.search).get(
+            "utm_medium",
+          ),
+          utm_campaign: new URLSearchParams(window.location.search).get(
+            "utm_campaign",
+          ),
+        }),
     },
     true,
   );
