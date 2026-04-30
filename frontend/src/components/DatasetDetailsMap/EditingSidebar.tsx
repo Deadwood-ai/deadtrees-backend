@@ -16,7 +16,7 @@ interface EditingSidebarProps {
 }
 
 export default function EditingSidebar({ layerType }: EditingSidebarProps) {
-  const layerName = layerType === "deadwood" ? "Deadwood" : "Forest Cover";
+  const layerName = layerType === "deadwood" ? "Deadwood cover" : "Tree cover";
 
   return (
     <div className="p-2">

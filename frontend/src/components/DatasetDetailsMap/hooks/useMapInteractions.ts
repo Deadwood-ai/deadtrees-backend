@@ -89,10 +89,10 @@ export function useMapInteractions({
 		// Check deadwood layer first (higher priority)
 		if (deadwoodLayer?.getVisible() && map.hasFeatureAtPixel(pixel, { layerFilter: (l) => l === deadwoodLayer })) {
 			hitLayer = deadwoodLayer;
-			layerType = "Deadwood";
+			layerType = "Deadwood cover";
 		} else if (forestCoverLayer?.getVisible() && map.hasFeatureAtPixel(pixel, { layerFilter: (l) => l === forestCoverLayer })) {
 			hitLayer = forestCoverLayer;
-			layerType = "Forest Cover";
+			layerType = "Tree cover";
 		}
 
 		// Update cursor
@@ -140,11 +140,11 @@ export function useMapInteractions({
 		if (deadwoodLayer?.getVisible() && map.hasFeatureAtPixel(pixel, { layerFilter: (l) => l === deadwoodLayer })) {
 			hitLayer = deadwoodLayer;
 			layerType = "deadwood";
-			displayType = "Deadwood";
+			displayType = "Deadwood cover";
 		} else if (forestCoverLayer?.getVisible() && map.hasFeatureAtPixel(pixel, { layerFilter: (l) => l === forestCoverLayer })) {
 			hitLayer = forestCoverLayer;
 			layerType = "forest_cover";
-			displayType = "Forest Cover";
+			displayType = "Tree cover";
 		}
 
 		if (hitLayer) {

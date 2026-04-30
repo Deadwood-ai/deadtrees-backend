@@ -62,8 +62,8 @@ const PROCESSING_STATE_OPTIONS: Array<{ label: string; value: ProcessingStateFil
 	{ label: "Ortho", value: "ortho" },
 	{ label: "COG", value: "cog" },
 	{ label: "Thumb", value: "thumbnail" },
-	{ label: "Deadwood", value: "deadwood" },
-	{ label: "Forest", value: "forestCover" },
+	{ label: "Deadwood cover", value: "deadwood" },
+	{ label: "Tree cover", value: "forestCover" },
 	{ label: "Metadata", value: "metadata" },
 ];
 

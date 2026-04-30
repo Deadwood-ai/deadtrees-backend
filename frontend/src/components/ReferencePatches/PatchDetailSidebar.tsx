@@ -511,7 +511,7 @@ export default function PatchDetailSidebar({
             {/* Layer-specific progress bars */}
             <div>
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs text-gray-500">Deadwood Validation</span>
+                <span className="text-xs text-gray-500">Deadwood cover validation</span>
                 <span className="text-xs font-medium">
                   {basePatchProgress.deadwoodValidated} / {basePatchProgress.total5}
                 </span>
@@ -525,7 +525,7 @@ export default function PatchDetailSidebar({
             </div>
             <div>
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs text-gray-500">Forest Cover Validation</span>
+                <span className="text-xs text-gray-500">Tree cover validation</span>
                 <span className="text-xs font-medium">
                   {basePatchProgress.forestCoverValidated} / {basePatchProgress.total5}
                 </span>
@@ -639,11 +639,11 @@ export default function PatchDetailSidebar({
               size="large"
               title={editButtonEnabled ? "Edit current layer (E)" : "Select a layer to edit"}
             >
-              Edit {currentLayer === "deadwood" ? "Deadwood" : "Forest Cover"} (E)
+              Edit {currentLayer === "deadwood" ? "deadwood cover" : "tree cover"} (E)
             </Button>
             {!editButtonEnabled && (
               <Typography.Text type="secondary" className="mt-2 block text-center text-xs">
-                Select a layer to edit (Deadwood or Forest Cover)
+                Select a layer to edit (deadwood cover or tree cover)
               </Typography.Text>
             )}
           </div>

@@ -58,7 +58,7 @@ const FAQ = () => {
       children: (
         <div>
               <p className="text-md">
-                The data is processed to detect forest cover and tree mortality to train our machine learning models. By default,
+	                The data is processed to detect tree cover and deadwood cover to train our machine learning models. By default,
                 all uploaded data is made publicly available under the Creative Commons Attribution (CC BY) license, though
                 you can request private usage for model training only if needed.
               </p>
@@ -112,7 +112,7 @@ const FAQ = () => {
         <div>
           <p className="text-md">
             Individual datasets are available for immediate download, including both orthophotos and machine-generated
-            deadwood labels in GeoPackage format. However, our complete database currently exceeds several terabytes in
+	            deadwood cover labels in GeoPackage format. However, our complete database currently exceeds several terabytes in
             size, making bulk downloads challenging.
           </p>
           <p className="text-md mt-2">We're actively developing improved infrastructure to enable:</p>
@@ -147,7 +147,7 @@ const FAQ = () => {
             </li>
 
             <li>
-              <strong>Optional:</strong> Vector data (GeoJSON, Shapefile, GeoPackage) with deadwood labels or other
+	              <strong>Optional:</strong> Vector data (GeoJSON, Shapefile, GeoPackage) with deadwood cover labels or other
               reference data
             </li>
           </ul>

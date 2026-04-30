@@ -145,7 +145,7 @@ const DatasetLayerControlPanel = ({
               >
                 <span className={`flex items-center gap-2 ${forestCoverQuality === "bad" && !canBypassQualityRestriction ? "opacity-50" : ""}`}>
                   <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.forest.fill }} />
-                  <span className="text-xs text-gray-600">Forest Cover</span>
+                  <span className="text-xs text-gray-600">Tree cover</span>
                 </span>
               </Checkbox>
               <QualityIcon quality={forestCoverQuality} />
@@ -175,7 +175,7 @@ const DatasetLayerControlPanel = ({
               >
                 <span className={`flex items-center gap-2 ${deadwoodQuality === "bad" && !canBypassQualityRestriction ? "opacity-50" : ""}`}>
                   <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
-                  <span className="text-xs text-gray-600">Standing Deadwood</span>
+                  <span className="text-xs text-gray-600">Deadwood cover</span>
                 </span>
               </Checkbox>
               <div className="flex items-center gap-1">
@@ -265,7 +265,7 @@ const DatasetLayerControlPanel = ({
             <div className="mt-2 space-y-2 rounded bg-gray-50 p-2 text-xs">
               {hasDeadwood && (
                 <div>
-                  <div className="font-semibold text-gray-800">Deadwood Detection:</div>
+                  <div className="font-semibold text-gray-800">Deadwood cover:</div>
                   <a
                     href="https://www.sciencedirect.com/science/article/pii/S2667393225000237"
                     className="text-blue-600 underline"
@@ -278,7 +278,7 @@ const DatasetLayerControlPanel = ({
               )}
               {hasForestCover && (
                 <div>
-                  <div className="font-semibold text-gray-800">Forest Cover:</div>
+                  <div className="font-semibold text-gray-800">Tree cover:</div>
                   <a
                     href="https://proceedings.neurips.cc/paper_files/paper/2024/file/58efdd77196fa8159062afa0408245da-Paper-Datasets_and_Benchmarks_Track.pdf"
                     className="text-blue-600 underline"
@@ -321,7 +321,7 @@ const DatasetLayerControlPanel = ({
               onClick={onEditForestCover}
               block
             >
-              Edit Forest Cover
+              Edit tree cover
             </Button>
           )}
 
@@ -332,7 +332,7 @@ const DatasetLayerControlPanel = ({
               onClick={onEditDeadwood}
               block
             >
-              Edit Deadwood
+              Edit deadwood cover
             </Button>
           )}
 

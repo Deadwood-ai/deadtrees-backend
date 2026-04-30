@@ -231,7 +231,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
     }
 
     message.info(
-      `Editing ${editingLayerType === "deadwood" ? "Deadwood" : "Forest Cover"} - ${loadedGeometries.length} polygons loaded`
+      `Editing ${editingLayerType === "deadwood" ? "deadwood cover" : "tree cover"} - ${loadedGeometries.length} polygons loaded`
     );
   }, [predictionLabel?.id, loadedGeometries, editingLayerType, editor]);
 
@@ -506,7 +506,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
             loading={isLoading}
           >
             Start Editing{" "}
-            {editingLayerType === "deadwood" ? "Deadwood" : "Forest Cover"}
+            {editingLayerType === "deadwood" ? "Deadwood cover" : "Tree cover"}
           </Button>
         )}
       </div>

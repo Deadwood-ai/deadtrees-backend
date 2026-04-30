@@ -347,7 +347,7 @@ export default function DatasetDetails() {
             onSave={editing.handleSaveEdits}
             onCancel={editing.handleCancelEditing}
             position="top-right"
-            title={`Editing ${editingLayerType === "deadwood" ? "Deadwood" : "Forest Cover"}`}
+            title={`Editing ${editingLayerType === "deadwood" ? "deadwood cover" : "tree cover"}`}
           />
         )}
 

@@ -524,7 +524,7 @@ const UploadModal: React.FC<UploadModalProps> = ({ isVisible, onClose, uploadKey
                             <div className="text-start">
                               <p className="ant-upload-text mb-0">Click or drag labels file to this area</p>
                               <p className="ant-upload-hint mb-0 text-xs">
-                                Upload standing deadwood labels as GeoJSON, Shapefile (zip) or GeoPackage
+	                                Upload deadwood cover labels as GeoJSON, Shapefile (zip) or GeoPackage
                               </p>
                             </div>
                           </div>

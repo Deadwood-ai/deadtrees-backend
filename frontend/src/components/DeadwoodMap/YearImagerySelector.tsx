@@ -118,11 +118,11 @@ const YearImagerySelector = ({
   // Determine the active product name based on which layers are shown
   const activeProductName =
     showForest && showDeadwood
-      ? "Fractional Cover"
+      ? "Fractional cover [%]"
       : showForest
-        ? "Fractional Tree Cover"
+        ? "Tree cover [%]"
         : showDeadwood
-          ? "Fractional Standing Deadwood"
+          ? "Deadwood cover [%]"
           : "Predictions";
 
   // Items are already sorted by acquisition date (oldest first) from the hook

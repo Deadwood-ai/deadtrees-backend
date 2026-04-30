@@ -50,17 +50,17 @@ const MapLegend = ({ clickedValues, showForest, showDeadwood, embedded = false }
     >
       {/* Header */}
       <div className="mb-2">
-        <div className="text-sm font-medium text-gray-700">Fractional Cover</div>
+        <div className="text-sm font-medium text-gray-700">Fractional cover [%]</div>
         <div className="text-xs text-gray-400">Sentinel-2 based</div>
       </div>
 
-      {/* Tree - only show when active */}
+      {/* Tree cover - only show when active */}
       {showForest && (
         <div>
           <div className="mb-1 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.forest.fill }} />
-              <span className="text-xs text-gray-600">Tree</span>
+              <span className="text-xs text-gray-600">Tree cover [%]</span>
             </div>
             <span className="text-xs text-gray-400">0–100%</span>
           </div>
@@ -72,14 +72,14 @@ const MapLegend = ({ clickedValues, showForest, showDeadwood, embedded = false }
         </div>
       )}
 
-      {/* Standing Deadwood - only show when active */}
+      {/* Deadwood cover - only show when active */}
       {showDeadwood && showForest && <div className="mt-2" />}
       {showDeadwood && (
         <div>
           <div className="mb-1 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
-              <span className="text-xs text-gray-600">Standing Deadwood</span>
+              <span className="text-xs text-gray-600">Deadwood cover [%]</span>
             </div>
             <span className="text-xs text-gray-400">0–100%</span>
           </div>
@@ -99,10 +99,10 @@ const MapLegend = ({ clickedValues, showForest, showDeadwood, embedded = false }
         </div>
 
         {clickedValues ? (
-          <div className="flex text-xs">
+          <div className="flex flex-col gap-1 text-xs">
             {showForest && (
               <div className="flex items-center gap-1">
-                <span className="text-gray-500">Tree:</span>
+                <span className="text-gray-500">Tree cover [%]:</span>
                 <span className="font-semibold" style={{ color: mapColors.forest.text }}>
                   {clickedValues.forestPct}%
                 </span>
@@ -110,7 +110,7 @@ const MapLegend = ({ clickedValues, showForest, showDeadwood, embedded = false }
             )}
             {showDeadwood && (
               <div className="flex items-center gap-1">
-                <span className="text-gray-500">Standing Deadwood:</span>
+                <span className="text-gray-500">Deadwood cover [%]:</span>
                 <span className="font-semibold" style={{ color: mapColors.deadwood.text }}>
                   {clickedValues.deadwoodPct}%
                 </span>

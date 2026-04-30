@@ -311,10 +311,10 @@ export function PredictionQualityCard() {
 				<Text strong className="text-xs">4. Prediction Quality</Text>
 			</div>
 
-			{/* Deadwood */}
+				{/* Deadwood cover */}
 			<div className="mb-3">
 				<div className="mb-1 flex items-center">
-					<Text className="text-xs font-medium">Deadwood Segmentation</Text>
+					<Text className="text-xs font-medium">Deadwood cover segmentation</Text>
 				</div>
 				<Form.Item
 					name="deadwood_quality"
@@ -330,19 +330,19 @@ export function PredictionQualityCard() {
 					</Radio.Group>
 				</Form.Item>
 				<Form.Item name="deadwood_notes" className="mb-0">
-					<TextArea rows={1} placeholder="Deadwood notes..." className="text-xs" />
+					<TextArea rows={1} placeholder="Deadwood cover notes..." className="text-xs" />
 				</Form.Item>
 			</div>
 
-			{/* Forest Cover */}
+			{/* Tree cover */}
 			<div>
 				<div className="mb-1 flex items-center">
-					<Text className="text-xs font-medium">Forest Cover Segmentation</Text>
+					<Text className="text-xs font-medium">Tree cover segmentation</Text>
 				</div>
 				<Form.Item
 					name="forest_cover_quality"
 					className="mb-1"
-					rules={[{ required: false, message: "Please rate forest cover quality" }]}
+					rules={[{ required: false, message: "Please rate tree cover quality" }]}
 				>
 					<Radio.Group>
 						<Space size="large">

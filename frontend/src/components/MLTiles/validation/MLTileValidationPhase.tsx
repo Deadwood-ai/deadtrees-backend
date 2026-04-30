@@ -85,13 +85,13 @@ export default function MLTileValidationPhase({ dataset }: Props) {
       render: (value: number | null) => (value != null ? `${value}%` : "—"),
     },
     {
-      title: "Deadwood %",
+      title: "Deadwood cover [%]",
       dataIndex: "deadwood_prediction_coverage_percent",
       key: "deadwood",
       render: (value: number | null) => (value != null ? `${value}%` : "—"),
     },
     {
-      title: "Forest %",
+      title: "Tree cover [%]",
       dataIndex: "forest_cover_prediction_coverage_percent",
       key: "forest",
       render: (value: number | null) => (value != null ? `${value}%` : "—"),

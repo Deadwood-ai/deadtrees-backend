@@ -94,7 +94,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isVisible, onClose, onApplyFi
         }}
       >
         <Form.Item className="mb-2" name="hasDeadwoodPrediction" valuePropName="checked">
-          <Checkbox>Has Deadwood Prediction</Checkbox>
+          <Checkbox>Has deadwood cover prediction</Checkbox>
         </Form.Item>
 
         {/* <Form.Item className="mb-2" name="hasLabels" valuePropName="checked">

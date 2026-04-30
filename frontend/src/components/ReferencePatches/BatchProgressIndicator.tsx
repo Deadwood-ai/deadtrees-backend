@@ -9,7 +9,7 @@ interface BatchProgressProps {
 }
 
 export default function BatchProgressIndicator({ layer, current, total, percentage }: BatchProgressProps) {
-  const layerLabel = layer === "deadwood" ? "Deadwood" : "Forest Cover";
+  const layerLabel = layer === "deadwood" ? "Deadwood cover" : "Tree cover";
 
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">

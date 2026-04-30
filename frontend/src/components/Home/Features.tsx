@@ -31,8 +31,7 @@ const Features = () => {
       <div className="pt-12 md:flex md:pt-24">
         <Feature
           title="Open access community effort"
-          description="Upload and download your aerial imagery with optional delineations of standing deadwood. 
-          Every contributor will be credited and invited to collaborate."
+          description="Upload and download your aerial imagery with optional deadwood cover annotations. Every contributor will be credited and invited to collaborate."
           iconPath="assets/open-access-icon.svg"
         />
         <Feature
@@ -50,7 +49,7 @@ const Features = () => {
         />
         <Feature
           title="Analysis ready training data"
-          description="High-resolution aerial imagery of forests worldwide together with delineated standing deadwood which can be used for training your own AI models."
+          description="High-resolution aerial imagery of forests worldwide together with deadwood cover annotations which can be used for training your own AI models."
           iconPath="assets/database-icon.svg"
           accent="amber"
         />
