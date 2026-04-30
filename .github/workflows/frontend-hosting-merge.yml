@@ -26,7 +26,7 @@ jobs:
       VITE_SUPABASE_SENTINEL_PROCESSING_URL: ${{ secrets.VITE_SUPABASE_SENTINEL_PROCESSING_URL }}
       VITE_SUPABASE_SENTINEL_PROCESSING_ANON_KEY: ${{ secrets.VITE_SUPABASE_SENTINEL_PROCESSING_ANON_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: npm ci
       - uses: FirebaseExtended/action-hosting-deploy@v0
         env:
