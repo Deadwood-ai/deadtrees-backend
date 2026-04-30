@@ -6,6 +6,7 @@ import { IDataset } from "../../types/dataset";
 import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
+import { hasForestCoverPredictionOutput } from "../../utils/predictionAvailability";
 import { FeatureTooltip, FeaturePopover, ClickedPolygonInfo } from "../DatasetDetailsMap/overlays";
 import {
 	useMapCore,
@@ -160,7 +161,7 @@ const DatasetAuditMap = forwardRef<DatasetAuditMapHandle, DatasetAuditMapProps>(
 		map: mapRef.current,
 		deadwoodLabelId: deadwood.data?.id,
 		forestCoverLabelId: forestCover.data?.id,
-		isForestCoverDone: data?.is_forest_cover_done,
+		isForestCoverDone: hasForestCoverPredictionOutput(data),
 		showCorrectionStyling: true,
 		filterCorrectionStatus: 'all', // Show all polygons including pending deletions
 		getDeadwoodVisible,

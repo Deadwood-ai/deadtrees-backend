@@ -6,6 +6,7 @@ import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 import { useDatasetAOI } from "../../hooks/useDatasetAudit";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { hasForestCoverPredictionOutput } from "../../utils/predictionAvailability";
 import { FeatureTooltip, FeaturePopover, ClickedPolygonInfo } from "./overlays";
 import {
 	useMapInstance,
@@ -146,7 +147,7 @@ export default function BaseMap({
 		map: mapRef.current,
 		deadwoodLabelId: deadwoodLabelIdOverride !== undefined ? deadwoodLabelIdOverride : deadwood.data?.id,
 		forestCoverLabelId: forestCoverLabelIdOverride !== undefined ? forestCoverLabelIdOverride : forestCover.data?.id,
-		isForestCoverDone: data?.is_forest_cover_done,
+		isForestCoverDone: hasForestCoverPredictionOutput(data),
 		showCorrectionStyling: true,
 		getDeadwoodVisible,
 		getForestCoverVisible,
