@@ -19,7 +19,10 @@ vi.mock("posthog-js", () => ({
 let createAnalyticsPayload: typeof import("./analytics").createAnalyticsPayload;
 let deriveUserSegment: typeof import("./analytics").deriveUserSegment;
 let initializePostHog: typeof import("./analytics").initializePostHog;
+let sanitizeAnalyticsUrl: typeof import("./analytics").sanitizeAnalyticsUrl;
 let sanitizeEventProperties: typeof import("./analytics").sanitizeEventProperties;
+let sanitizePostHogCapture: typeof import("./analytics").sanitizePostHogCapture;
+let trackPageView: typeof import("./analytics").trackPageView;
 
 beforeEach(async () => {
   vi.resetModules();
@@ -56,7 +59,10 @@ beforeEach(async () => {
   createAnalyticsPayload = analytics.createAnalyticsPayload;
   deriveUserSegment = analytics.deriveUserSegment;
   initializePostHog = analytics.initializePostHog;
+  sanitizeAnalyticsUrl = analytics.sanitizeAnalyticsUrl;
   sanitizeEventProperties = analytics.sanitizeEventProperties;
+  sanitizePostHogCapture = analytics.sanitizePostHogCapture;
+  trackPageView = analytics.trackPageView;
 });
 
 describe("deriveUserSegment", () => {
@@ -98,6 +104,49 @@ describe("sanitizeEventProperties", () => {
       }),
     ).toEqual({
       dataset_id: 42,
+    });
+  });
+});
+
+describe("sanitizeAnalyticsUrl", () => {
+  it("strips Supabase recovery tokens from URL fragments", () => {
+    expect(
+      sanitizeAnalyticsUrl(
+        "https://deadtrees.earth/reset-password#access_token=secret&refresh_token=also-secret&type=recovery",
+      ),
+    ).toBe("https://deadtrees.earth/reset-password");
+  });
+
+  it("redacts sensitive query parameter values but keeps route context", () => {
+    expect(
+      sanitizeAnalyticsUrl(
+        "/reset-password?access_token=secret&utm_source=email",
+      ),
+    ).toBe("/reset-password?access_token=%5Bredacted%5D&utm_source=email");
+  });
+});
+
+describe("sanitizePostHogCapture", () => {
+  it("sanitizes PostHog SDK URL properties before send", () => {
+    expect(
+      sanitizePostHogCapture({
+        event: "$pageview",
+        properties: {
+          $current_url:
+            "https://deadtrees.earth/reset-password#access_token=secret",
+          $session_entry_url:
+            "https://deadtrees.earth/reset-password?refresh_token=secret",
+          url: "/reset-password#refresh_token=secret",
+        },
+      }),
+    ).toEqual({
+      event: "$pageview",
+      properties: {
+        $current_url: "https://deadtrees.earth/reset-password",
+        $session_entry_url:
+          "https://deadtrees.earth/reset-password?refresh_token=%5Bredacted%5D",
+        url: "/reset-password",
+      },
     });
   });
 });
@@ -166,7 +215,7 @@ describe("initializePostHog", () => {
       expect.objectContaining({
         persistence: "memory",
         autocapture: false,
-        capture_pageview: true,
+        capture_pageview: false,
       }),
     );
     expect(posthogMock.clear_opt_in_out_capturing).toHaveBeenCalledTimes(1);
@@ -191,7 +240,7 @@ describe("initializePostHog", () => {
       expect.objectContaining({
         persistence: "memory",
         autocapture: false,
-        capture_pageview: true,
+        capture_pageview: false,
         capture_pageleave: false,
       }),
     );
@@ -200,8 +249,8 @@ describe("initializePostHog", () => {
       expect.objectContaining({
         persistence: "cookie",
         autocapture: true,
-        capture_pageview: true,
-        capture_pageleave: true,
+        capture_pageview: false,
+        capture_pageleave: false,
       }),
     );
     expect(posthogMock.opt_in_capturing).toHaveBeenCalledTimes(1);
@@ -213,5 +262,27 @@ describe("initializePostHog", () => {
     initializePostHog("pending");
 
     expect(posthogMock.clear_opt_in_out_capturing).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("trackPageView", () => {
+  it("captures accepted pageviews with sanitized URL properties", () => {
+    posthogMock.has_opted_in_capturing.mockReturnValue(true);
+
+    trackPageView("https://deadtrees.earth/reset-password#access_token=secret");
+
+    expect(posthogMock.capture).toHaveBeenCalledWith("$pageview", {
+      $current_url: "https://deadtrees.earth/reset-password",
+      url: "https://deadtrees.earth/reset-password",
+      url_path: "/reset-password",
+    });
+  });
+
+  it("captures limited pageviews without URL fragments", () => {
+    trackPageView("/reset-password#refresh_token=secret");
+
+    expect(posthogMock.capture).toHaveBeenCalledWith("$pageview", {
+      url_path: "/reset-password",
+    });
   });
 });

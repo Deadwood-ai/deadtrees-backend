@@ -48,7 +48,9 @@ function LayoutWrapper() {
     "/reset-password",
   ];
 
-  const shouldUseFullHeight = fullHeightPaths.some((path) => location.pathname.startsWith(path));
+  const shouldUseFullHeight = fullHeightPaths.some((path) =>
+    location.pathname.startsWith(path),
+  );
 
   return (
     <div>
@@ -81,9 +83,6 @@ function AppWithTracking() {
   useEffect(() => {
     // Initialize PostHog on app load
     initializePostHog();
-
-    // Track initial page view
-    trackPageView(window.location.href);
   }, []);
 
   useEffect(() => {
@@ -97,43 +96,52 @@ function AppWithTracking() {
         <Route path="/" element={<HomePage />} />
         <Route
           path="profile"
-          element={(
+          element={
             <RequireAuth>
               <ProfilePage />
             </RequireAuth>
-          )}
+          }
         />
         <Route path="dataset" element={<Dataset />} />
         <Route path="dataset/:id" element={<DatasetDetails />} />
         <Route path="dataset-audit" element={<DatasetAudit />} />
         <Route path="dataset-audit/:id" element={<DatasetAudit />} />
         {/* New route for Reference Patch Editor */}
-        <Route path="dataset-audit/:id/reference-patches" element={<DatasetReferencePatchEditor />} />
+        <Route
+          path="dataset-audit/:id/reference-patches"
+          element={<DatasetReferencePatchEditor />}
+        />
         {/* Old route kept for backward compatibility */}
         <Route path="dataset-audit/:id/ml-tiles" element={<DatasetMLTiles />} />
         <Route path="dataset-label/:id" element={<DatasetLabelEditor />} />
         {/* Public labelling / corrections editor */}
-        <Route path="dataset-corrections/:id" element={<DatasetCorrections />} />
+        <Route
+          path="dataset-corrections/:id"
+          element={<DatasetCorrections />}
+        />
         <Route path="deadtrees" element={<Deadtrees />} />
         <Route path="about" element={<About />} />
         <Route path="impressum" element={<Impressum />} />
-        <Route path="datenschutzerklaerung" element={<Datenschutzerklaerung />} />
+        <Route
+          path="datenschutzerklaerung"
+          element={<Datenschutzerklaerung />}
+        />
         <Route path="terms-of-service" element={<TermsOfService />} />
         <Route
           path="sign-up"
-          element={(
+          element={
             <PublicOnly>
               <SignUp />
             </PublicOnly>
-          )}
+          }
         />
         <Route
           path="sign-in"
-          element={(
+          element={
             <PublicOnly>
               <SignIn />
             </PublicOnly>
-          )}
+          }
         />
         <Route path="forgot-password" element={<Forgotpassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
