@@ -14,6 +14,7 @@ export function useModelVariantLabels(datasetId: number | undefined, labelData: 
         .eq("dataset_id", datasetId)
         .eq("label_data", labelData)
         .eq("label_source", ILabelSource.MODEL_PREDICTION)
+        .eq("is_active", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ILabel[];

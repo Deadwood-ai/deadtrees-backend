@@ -129,6 +129,38 @@ ensure_file_from_shared() {
   log "Copied local file from shared root: $relative_path"
 }
 
+ensure_directory_from_shared() {
+  local relative_path="$1"
+  local target="$REPO_ROOT/$relative_path"
+  local source="$SHARED_ROOT/$relative_path"
+  local copied=false
+
+  if [[ "$SHARED_ROOT" == "$REPO_ROOT" || ! -d "$source" ]]; then
+    log "Shared local directory missing, skipping copy: $relative_path"
+    return
+  fi
+
+  while IFS= read -r -d '' relative_dir; do
+    mkdir -p "$target/$relative_dir"
+  done < <(cd "$source" && find . -type d -print0)
+
+  while IFS= read -r -d '' relative_file; do
+    if [[ -e "$target/$relative_file" ]]; then
+      continue
+    fi
+
+    mkdir -p "$(dirname "$target/$relative_file")"
+    cp "$source/$relative_file" "$target/$relative_file"
+    copied=true
+  done < <(cd "$source" && find . -type f -print0)
+
+  if [[ "$copied" == true ]]; then
+    log "Copied local directory from shared root: $relative_path"
+  else
+    log "Local directory already present: $relative_path"
+  fi
+}
+
 ensure_frontend_env_profiles() {
   ensure_file_from_shared "frontend/.env.dev.local"
   ensure_file_from_shared "frontend/.env.prod.local"
@@ -138,6 +170,12 @@ ensure_frontend_env_profiles() {
   fi
 
   ensure_file_from_example "$REPO_ROOT/frontend/.env.local" "$REPO_ROOT/frontend/.env.local.example"
+}
+
+ensure_codex_local_config() {
+  ensure_file_from_shared ".codex/config.toml"
+  ensure_file_from_shared ".codex/local-access.md"
+  ensure_directory_from_shared ".codex/environments"
 }
 
 ensure_env_line() {
@@ -266,6 +304,8 @@ git -C "$REPO_ROOT" submodule update --init --recursive
 
 ensure_file_from_example "$REPO_ROOT/.env" "$REPO_ROOT/.env.example"
 ensure_frontend_env_profiles
+ensure_codex_local_config
+ensure_directory_from_shared "docs/ops"
 ensure_env_line "$REPO_ROOT/.env" "COMPOSE_PROJECT_NAME" "$DEFAULT_COMPOSE_PROJECT_NAME"
 
 if [[ "$LINK_SHARED" == true ]]; then
@@ -293,6 +333,8 @@ Worktree setup complete.
 What this prepared:
   - repo env files
   - frontend local/prod env profiles where available
+  - local Codex config where available (.codex)
+  - local ops docs where available (docs/ops)
   - stable Docker compose project name (${DEFAULT_COMPOSE_PROJECT_NAME})
   - git submodules
   - per-worktree Python CLI environment

@@ -7,6 +7,8 @@ import type Feature from "ol/Feature";
 import type { Geometry } from "ol/geom";
 import MultiPolygon from "ol/geom/MultiPolygon";
 import GeoJSON from "ol/format/GeoJSON";
+import { ILabel, ILabelData, ILabelSource } from "../types/labels";
+import { selectPreferredModelLabel } from "../utils/modelPreferences";
 
 export type LayerType = "deadwood" | "forest_cover";
 
@@ -52,15 +54,18 @@ export function usePredictionLabel(datasetId: number | undefined, layerType: Lay
 
       const { data, error } = await supabase
         .from("v2_labels")
-        .select("id")
+        .select("id,label_source,label_data,model_config,is_active")
         .eq("dataset_id", datasetId)
         .eq("label_data", layerType)
-        .eq("label_source", "model_prediction")
-        .eq("is_active", true)
-        .maybeSingle();
+        .eq("label_source", ILabelSource.MODEL_PREDICTION)
+        .eq("is_active", true);
 
       if (error) throw error;
-      return data;
+      const preferredLabel = selectPreferredModelLabel(
+        (data ?? []) as ILabel[],
+        layerType as ILabelData
+      );
+      return preferredLabel ? { id: preferredLabel.id } : null;
     },
     enabled: !!datasetId && !!layerType,
   });

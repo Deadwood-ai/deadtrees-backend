@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { IDataset } from "../../types/dataset";
 import { IReferencePatch, PatchResolution } from "../../types/referencePatches";
-import { ILabelData } from "../../types/labels";
+import { ILabel, ILabelData, ILabelSource } from "../../types/labels";
 import {
   useReferencePatches,
   useCreateReferencePatch,
@@ -28,6 +28,7 @@ import { LayerRadioButtons, EditorToolbar, type LayerSelection } from "../Polygo
 import { findBasePatchForPatch, getPreferredDefaultPatch } from "./utils/patchSelection";
 import { MAP_FLOATING_CHILD_TOP_CLASS, MAP_REFERENCE_SIDEBAR_WIDTH_CLASS } from "../../theme/mapLayout";
 import { useReferenceEditorKeyboardShortcuts } from "./hooks/useReferenceEditorKeyboardShortcuts";
+import { selectPreferredModelLabel } from "../../utils/modelPreferences";
 
 interface Props {
   dataset: IDataset;
@@ -517,22 +518,23 @@ export default function ReferencePatchEditorView({
       try {
         console.debug("[Auto-copy] Starting batch processing for patch:", basePatch.id);
 
-        // Fetch model prediction labels for deadwood and forest_cover
-        const { data: deadwoodLabel } = await supabase
-          .from("v2_labels")
-          .select("id")
-          .eq("dataset_id", dataset.id)
-          .eq("label_data", ILabelData.DEADWOOD)
-          .eq("label_source", "model_prediction")
-          .maybeSingle();
+        const fetchPreferredPredictionLabel = async (labelData: ILabelData) => {
+          const { data, error } = await supabase
+            .from("v2_labels")
+            .select("id,label_source,label_data,model_config,is_active")
+            .eq("dataset_id", dataset.id)
+            .eq("label_data", labelData)
+            .eq("label_source", ILabelSource.MODEL_PREDICTION)
+            .eq("is_active", true);
 
-        const { data: forestCoverLabel } = await supabase
-          .from("v2_labels")
-          .select("id")
-          .eq("dataset_id", dataset.id)
-          .eq("label_data", ILabelData.FOREST_COVER)
-          .eq("label_source", "model_prediction")
-          .maybeSingle();
+          if (error) throw error;
+
+          const preferredLabel = selectPreferredModelLabel((data ?? []) as ILabel[], labelData);
+          return preferredLabel ? { id: preferredLabel.id } : null;
+        };
+
+        const deadwoodLabel = await fetchPreferredPredictionLabel(ILabelData.DEADWOOD);
+        const forestCoverLabel = await fetchPreferredPredictionLabel(ILabelData.FOREST_COVER);
 
         const bbox = {
           minx: basePatch.bbox_minx,

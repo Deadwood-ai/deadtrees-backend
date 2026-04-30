@@ -4,7 +4,11 @@ import { supabase } from "../../hooks/useSupabase";
 
 const fetchLabels = async ({ dataset_id }: { dataset_id: number }): Promise<ILabels | null> => {
   console.debug("dataset_id", dataset_id);
-  const { data, error } = await supabase.from(Settings.LABELS_TABLE).select("*").eq("dataset_id", dataset_id);
+  const { data, error } = await supabase
+    .from(Settings.LABELS_TABLE)
+    .select("*")
+    .eq("dataset_id", dataset_id)
+    .eq("is_active", true);
 
   if (error) {
     // console.error("Error fetching data:", error);

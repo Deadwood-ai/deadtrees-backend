@@ -60,4 +60,22 @@ describe("model preference label selection", () => {
         ?.id,
     ).toBe(20762);
   });
+
+  it("ignores inactive model label versions", () => {
+    const inactiveCombined = modelLabel(
+      20764,
+      "deadwood_treecover_combined_v2",
+    );
+    inactiveCombined.is_active = false;
+
+    const activeLegacy = modelLabel(20762, "treecover_segmentation_oam_tcd");
+
+    expect(
+      selectPreferredModelLabel(
+        [inactiveCombined, activeLegacy],
+        ILabelData.FOREST_COVER,
+        new Map(),
+      )?.id,
+    ).toBe(20762);
+  });
 });

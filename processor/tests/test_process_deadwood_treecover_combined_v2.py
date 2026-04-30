@@ -127,8 +127,8 @@ def test_process_combined_segmentation_success(combined_task, auth_token):
 
 
 @pytest.mark.comprehensive
-def test_process_combined_replaces_existing_labels(combined_task, auth_token):
-	"""Re-running the combined model replaces previous prediction labels for both layer types."""
+def test_process_combined_versions_existing_combined_labels_without_deleting_legacy_labels(combined_task, auth_token):
+	"""Re-running the combined model preserves labels and only deactivates older combined versions."""
 	from shared.models import LabelPayloadData
 	from shared.labels import create_label_with_geometries
 	from shapely.geometry import Polygon
@@ -139,9 +139,10 @@ def test_process_combined_replaces_existing_labels(combined_task, auth_token):
 	}
 	model_config = {'module': 'deadwood_treecover_combined_v2', 'checkpoint_name': Path(MODEL_PATH).name}
 
-	existing_ids = []
+	existing_combined_ids = {}
+	legacy_ids = {}
 	for label_data in (LabelDataEnum.deadwood, LabelDataEnum.forest_cover):
-		payload = LabelPayloadData(
+		combined_payload = LabelPayloadData(
 			dataset_id=combined_task.dataset_id,
 			label_source=LabelSourceEnum.model_prediction,
 			label_type=LabelTypeEnum.semantic_segmentation,
@@ -150,16 +151,54 @@ def test_process_combined_replaces_existing_labels(combined_task, auth_token):
 			model_metadata=model_config,
 			geometry=test_geojson,
 		)
-		label = create_label_with_geometries(payload, combined_task.user_id, auth_token)
-		existing_ids.append(label.id)
+		combined_label = create_label_with_geometries(combined_payload, combined_task.user_id, auth_token)
+		existing_combined_ids[label_data.value] = combined_label.id
+
+		legacy_payload = LabelPayloadData(
+			dataset_id=combined_task.dataset_id,
+			label_source=LabelSourceEnum.model_prediction,
+			label_type=LabelTypeEnum.semantic_segmentation,
+			label_data=label_data,
+			label_quality=3,
+			model_metadata=None,
+			geometry=test_geojson,
+		)
+		legacy_label = create_label_with_geometries(legacy_payload, combined_task.user_id, auth_token)
+		legacy_ids[label_data.value] = legacy_label.id
 
 	process_deadwood_treecover_combined_v2(combined_task, auth_token, settings.processing_path)
 
 	with use_client(auth_token) as client:
 		response = (
-			client.table(settings.labels_table).select('id').eq('dataset_id', combined_task.dataset_id).execute()
+			client.table(settings.labels_table)
+			.select('id,label_data,model_config,is_active,version,parent_label_id')
+			.eq('dataset_id', combined_task.dataset_id)
+			.execute()
 		)
-	new_ids = {r['id'] for r in response.data}
 
-	# None of the original labels should survive
-	assert not new_ids & set(existing_ids)
+	labels_by_id = {label['id']: label for label in response.data}
+
+	for label_id in legacy_ids.values():
+		assert label_id in labels_by_id
+		assert labels_by_id[label_id]['is_active'] is True
+
+	for label_data, old_id in existing_combined_ids.items():
+		assert old_id in labels_by_id
+
+		new_combined_labels = [
+			label
+			for label in response.data
+			if label['label_data'] == label_data
+			and label['id'] != old_id
+			and (label.get('model_config') or {}).get('module') == 'deadwood_treecover_combined_v2'
+		]
+		if not new_combined_labels:
+			# Empty predictions leave the previous combined label untouched.
+			assert labels_by_id[old_id]['is_active'] is True
+			continue
+
+		assert labels_by_id[old_id]['is_active'] is False
+		for label in new_combined_labels:
+			assert label['is_active'] is True
+			assert label['version'] == 2
+			assert label['parent_label_id'] == old_id
