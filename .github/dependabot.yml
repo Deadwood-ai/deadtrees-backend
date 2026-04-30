@@ -39,6 +39,12 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "tailwindcss"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "geotiff"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "match-sorter"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-player"
+        update-types: ["version-update:semver-major"]
 
       # Tooling majors should be reviewed as explicit maintenance work.
       - dependency-name: "vitest"
@@ -50,6 +56,8 @@ updates:
       - dependency-name: "@typescript-eslint/parser"
         update-types: ["version-update:semver-major"]
       - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-plugin-react-hooks"
         update-types: ["version-update:semver-major"]
       - dependency-name: "eslint-plugin-react-refresh"
         update-types: ["version-update:semver-minor"]
