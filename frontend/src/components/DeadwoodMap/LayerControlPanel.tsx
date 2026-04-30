@@ -74,7 +74,7 @@ const LayerControlPanel = ({
 
   return (
     <div
-      className={`map-control-panel box-border min-w-0 pointer-events-auto flex flex-col overflow-x-hidden p-3 ${isDrawerSheet ? "map-control-panel--drawer w-full" : "w-52 overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm"}`}
+      className={`map-control-panel box-border min-w-0 pointer-events-auto flex flex-col overflow-x-hidden p-3 ${isDrawerSheet ? "map-control-panel--drawer w-full" : "w-60 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gray-200/60 bg-white/95 shadow-xl backdrop-blur-sm"}`}
     >
       {/* Basemap Selection */}
       <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-gray-500">Basemap</div>
@@ -94,14 +94,14 @@ const LayerControlPanel = ({
         <Checkbox checked={showForest} onChange={(e) => setShowForest(e.target.checked)}>
           <span className="flex items-center gap-2">
             <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.forest.fill }} />
-            <span className="text-xs text-gray-600">Tree</span>
+            <span className="text-xs text-gray-600">Tree cover [%]</span>
           </span>
         </Checkbox>
         <div className="flex items-center justify-between">
           <Checkbox checked={showDeadwood} onChange={(e) => setShowDeadwood(e.target.checked)}>
             <span className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
-              <span className="text-xs text-gray-600">Standing Deadwood</span>
+              <span className="text-xs text-gray-600">Deadwood cover [%]</span>
             </span>
           </Checkbox>
           <Tooltip title={<div className="max-w-xs text-xs leading-relaxed">{standingDeadwoodLayerExplanation}</div>} placement="left">

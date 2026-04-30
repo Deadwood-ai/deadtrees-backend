@@ -24,7 +24,7 @@ export default function LayerRadioButtons({
 
   return (
     <div className={`absolute ${position === "bottom-left" ? "left-2" : "right-2"} bottom-2 z-10`}>
-      <Card size="small" className="shadow-lg" bodyStyle={{ padding: "12px", width: 180 }}>
+      <Card size="small" className="shadow-lg" bodyStyle={{ padding: "12px", width: 200 }}>
         <Radio.Group value={value} onChange={(e) => onChange(e.target.value)}>
           <Space direction="vertical" size="small" className="w-full">
             {showOrthoOnly && (
@@ -38,7 +38,7 @@ export default function LayerRadioButtons({
             {showDeadwood && (
               <Radio value="deadwood">
                 <span className="flex items-center justify-between">
-                  Deadwood
+                  Deadwood cover
                   <span className="ml-2 text-xs text-gray-400">(2)</span>
                 </span>
               </Radio>
@@ -46,7 +46,7 @@ export default function LayerRadioButtons({
             {showForestCover && (
               <Radio value="forest_cover">
                 <span className="flex items-center justify-between">
-                  Forest Cover
+                  Tree cover
                   <span className="ml-2 text-xs text-gray-400">(3)</span>
                 </span>
               </Radio>

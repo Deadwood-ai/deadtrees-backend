@@ -47,10 +47,10 @@ export function DeadwoodCardDetails({
 
         {!isCollapsed && (
           <>
-            {/* Deadwood Layer Controls - Only show if data exists */}
+            {/* Deadwood cover controls - only show if data exists */}
             {showLegend && (
               <div className="mb-2 flex w-full items-center">
-                <p className="m-0 w-2/3 text-xs text-gray-600">Deadwood Segmentation</p>
+                <p className="m-0 w-2/3 text-xs text-gray-600">Deadwood cover segmentation</p>
                 <div className="w-1/3 pl-3">
                   <Slider
                     className="m-0 w-full"
@@ -65,10 +65,10 @@ export function DeadwoodCardDetails({
               </div>
             )}
 
-            {/* Forest Cover Layer Controls - Only show if data exists */}
+            {/* Tree cover controls - only show if data exists */}
             {showForestCoverLegend && forestCoverOpacity !== undefined && setForestCoverOpacity && (
               <div className="mb-2 flex w-full items-center">
-                <p className="m-0 w-2/3 text-xs text-gray-600">Forest Cover Segmentation</p>
+                <p className="m-0 w-2/3 text-xs text-gray-600">Tree cover segmentation</p>
                 <div className="w-1/3 pl-3">
                   <Slider
                     className="m-0 w-full"
@@ -148,7 +148,7 @@ export function DeadwoodCardDetails({
                     )}
                     {showLegend && (
                       <div>
-                        <div className="font-semibold text-gray-800">Deadwood Detection:</div>
+                        <div className="font-semibold text-gray-800">Deadwood cover:</div>
                         <a
                           href="https://www.sciencedirect.com/science/article/pii/S2667393225000237"
                           className="text-blue-600 underline"
@@ -161,7 +161,7 @@ export function DeadwoodCardDetails({
                     )}
                     {showForestCoverLegend && (
                       <div>
-                        <div className="font-semibold text-gray-800">Forest Cover:</div>
+                        <div className="font-semibold text-gray-800">Tree cover:</div>
                         <a
                           href="https://proceedings.neurips.cc/paper_files/paper/2024/file/58efdd77196fa8159062afa0408245da-Paper-Datasets_and_Benchmarks_Track.pdf"
                           className="text-blue-600 underline"

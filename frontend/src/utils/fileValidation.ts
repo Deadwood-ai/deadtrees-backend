@@ -125,7 +125,7 @@ export const validateGeoTiffAiEligibility = async (file: Blob): Promise<GeoTiffA
 
   if (!inspection.supportsAiSegmentation) {
     throw new Error(
-      `We cannot process this dataset yet. Deadwood and tree cover currently require an RGB orthomosaic, but this file looks like ${inspection.colorModel}.`,
+      `We cannot process this dataset yet. Deadwood cover and tree cover currently require an RGB orthomosaic, but this file looks like ${inspection.colorModel}.`,
     );
   }
 

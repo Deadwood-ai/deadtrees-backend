@@ -55,8 +55,8 @@ function buildTooltip(audit: DatasetAuditUserInfo) {
     { label: "Georeferenced", value: renderBool(audit.is_georeferenced) },
     { label: "Valid acquisition date", value: renderBool(audit.has_valid_acquisition_date) },
     { label: "Phenology", value: `${renderBool(audit.has_valid_phenology)}`, hint: acquisitionHint },
-    { label: "Deadwood quality", value: renderQuality(audit.deadwood_quality || null) },
-    { label: "Forest cover quality", value: renderQuality(audit.forest_cover_quality || null) },
+    { label: "Deadwood cover quality", value: renderQuality(audit.deadwood_quality || null) },
+    { label: "Tree cover quality", value: renderQuality(audit.forest_cover_quality || null) },
   ];
 
   return (

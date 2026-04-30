@@ -8,9 +8,9 @@ export const AUDIT_INFO = {
 	phenology:
 		"Assess seasonal appropriateness: In Season means appropriate for the region and time. Out of Season (especially in non-tropical regions) should be excluded from Sentinel training.",
 	deadwoodQuality:
-		"Rate deadwood segmentation prediction quality: Great = highly accurate, OK = acceptable for Sentinel training, Bad = poor quality predictions.",
+			"Rate deadwood cover segmentation prediction quality: Great = highly accurate, OK = acceptable for Sentinel training, Bad = poor quality predictions.",
 	forestCoverQuality:
-		"Evaluate forest cover segmentation quality: Great = precise boundaries and classification, OK = acceptable accuracy, Bad = poor segmentation results.",
+			"Evaluate tree cover segmentation quality: Great = precise boundaries and classification, OK = acceptable accuracy, Bad = poor segmentation results.",
 	cogIssues:
 		"Assess Cloud-Optimized GeoTIFF quality: Check transparency, black/white areas, color band consistency, and artifacts. Good = no issues, Issues = problems detected.",
 	thumbnailIssues:

@@ -382,7 +382,7 @@ export default function ReferencePatchEditorView({
       console.debug("Overlay layer z-index:", overlayLayer.getZIndex());
 
       message.info(
-        `Editing ${layerType === "deadwood" ? "Deadwood" : "Forest Cover"} - ${features.length} polygons loaded`,
+        `Editing ${layerType === "deadwood" ? "deadwood cover" : "tree cover"} - ${features.length} polygons loaded`,
       );
     } catch (error) {
       console.error("Failed to load geometries for editing:", error);
@@ -439,7 +439,7 @@ export default function ReferencePatchEditorView({
       editor.getOverlayLayer()?.getSource()?.clear();
       setEditingMode(null);
 
-      message.success(`${editingMode === "deadwood" ? "Deadwood" : "Forest Cover"} reference updated!`);
+      message.success(`${editingMode === "deadwood" ? "Deadwood cover" : "Tree cover"} reference updated!`);
       onUnsavedChanges(true);
     } catch (error) {
       console.error("Failed to save edits:", error);

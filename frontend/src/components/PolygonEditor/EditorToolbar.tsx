@@ -53,7 +53,7 @@ export default function EditorToolbar({
   title,
   className,
 }: Props) {
-  const displayTitle = title || `Editing ${type === "deadwood" ? "Deadwood" : "Forest Cover"}`;
+  const displayTitle = title || `Editing ${type === "deadwood" ? "deadwood cover" : "tree cover"}`;
 
   return (
     <div className={`absolute ${position === "top-right" ? "right-4" : "left-4"} ${className || "top-32"} z-20`}>

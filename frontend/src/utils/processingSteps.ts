@@ -10,8 +10,8 @@ export const GEOTIFF_PROCESSING_STEPS: ProcessingStep[] = [
   { key: "ortho", label: "Processing Image", description: "Processing and validating your orthophoto" },
   { key: "metadata", label: "Extracting Information", description: "Extracting geographic and technical metadata" },
   { key: "cog", label: "Optimizing Data", description: "Converting to optimized format for visualization" },
-  { key: "deadwood", label: "AI Analysis", description: "Running AI analysis for deadwood detection" },
-  { key: "treecover", label: "Tree Cover Analysis", description: "Running AI analysis for tree cover segmentation" },
+  { key: "deadwood", label: "AI Analysis", description: "Running AI analysis for deadwood cover detection" },
+  { key: "treecover", label: "Tree cover analysis", description: "Running AI analysis for tree cover segmentation" },
 ];
 
 export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
@@ -21,14 +21,14 @@ export const RAW_IMAGES_PROCESSING_STEPS: ProcessingStep[] = [
   { key: "ortho", label: "Processing Image", description: "Processing and validating your orthophoto" },
   { key: "metadata", label: "Extracting Information", description: "Extracting geographic and technical metadata" },
   { key: "cog", label: "Optimizing Data", description: "Converting to optimized format for visualization" },
-  { key: "deadwood", label: "AI Analysis", description: "Running AI analysis for deadwood detection" },
-  { key: "treecover", label: "Tree Cover Analysis", description: "Running AI analysis for tree cover segmentation" },
+  { key: "deadwood", label: "AI Analysis", description: "Running AI analysis for deadwood cover detection" },
+  { key: "treecover", label: "Tree cover analysis", description: "Running AI analysis for tree cover segmentation" },
 ];
 
 const COMBINED_MODEL_STEP: ProcessingStep = {
   key: "combined_model",
   label: "Combined AI Analysis",
-  description: "Running combined deadwood and tree cover model",
+  description: "Running combined deadwood cover and tree cover model",
 };
 
 const COMBINED_MODEL_STATUS = "deadwood_treecover_combined_segmentation";

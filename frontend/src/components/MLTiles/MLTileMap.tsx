@@ -638,12 +638,12 @@ export default function MLTileMap({
           )}
           {deadwood.data?.id && (
             <Checkbox checked={showDeadwood} onChange={(e) => setShowDeadwood(e.target.checked)}>
-              Deadwood <span className="text-xs text-gray-500">(K)</span>
+              Deadwood cover <span className="text-xs text-gray-500">(K)</span>
             </Checkbox>
           )}
           {forestCover.data?.id && (
             <Checkbox checked={showForestCover} onChange={(e) => setShowForestCover(e.target.checked)}>
-              Forest Cover <span className="text-xs text-gray-500">(L)</span>
+              Tree cover <span className="text-xs text-gray-500">(L)</span>
             </Checkbox>
           )}
         </Space>

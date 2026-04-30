@@ -82,7 +82,7 @@ const VIEW_DESCRIPTIONS: Record<
   (treeThreshold: number, deadwoodThreshold: number) => string
 > = {
   threshold: (tree, dead) =>
-    `Pixels above a cover threshold are counted as fully covered (tree cover >${tree}%, deadwood >${dead}%). Best for detecting clearings and mortality patches.`,
+    `Pixels above a cover threshold are counted as fully covered (tree cover >${tree}%, deadwood cover >${dead}%). Best for detecting clearings and mortality patches.`,
   continuous: () =>
     "Each pixel contributes proportionally to its cover value. Captures gradual canopy changes but is sensitive to prediction variability.",
 };
@@ -114,14 +114,14 @@ const PolygonStatsModal = ({
           items.push({
             year: String(s.year),
             value: treeHa,
-            category: "Tree Cover",
+            category: "Tree cover",
           });
         }
         if (deadHa !== null) {
           items.push({
             year: String(s.year),
             value: deadHa,
-            category: "Standing Deadwood",
+            category: "Deadwood cover",
           });
         }
         return items;
@@ -270,10 +270,10 @@ const PolygonStatsModal = ({
                 </span>
               )}
             </div>
-            {/* Tree Cover */}
+            {/* Tree cover */}
             <div>
               <div className="text-xs" style={{ color: palette.forest[600] }}>
-                Tree Cover
+                Tree cover
               </div>
               <div
                 className={isMobile ? "text-base font-semibold" : "text-lg font-semibold"}
@@ -283,10 +283,10 @@ const PolygonStatsModal = ({
               </div>
               {treeCoverChange && <ChangeIndicator change={treeCoverChange} />}
             </div>
-            {/* Standing Deadwood */}
+            {/* Deadwood cover */}
             <div>
               <div className="text-xs" style={{ color: palette.deadwood[500] }}>
-                Standing Deadwood
+                Deadwood cover
               </div>
               <div
                 className={isMobile ? "text-base font-semibold" : "text-lg font-semibold"}
@@ -303,7 +303,7 @@ const PolygonStatsModal = ({
             <Alert
               type="info"
               message="No coverage data available"
-              description="The drawn polygon does not overlap with any coverage data. Try drawing in an area where the tree cover / deadwood layers are visible on the map."
+              description="The drawn polygon does not overlap with any coverage data. Try drawing in an area where the tree cover / deadwood cover layers are visible on the map."
               showIcon
             />
           )}

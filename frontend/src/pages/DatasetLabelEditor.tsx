@@ -410,8 +410,8 @@ export default function DatasetLabelEditor() {
             onChange={(e) => setActiveLayer(e.target.value as "deadwood" | "forest_cover")}
             size="small"
           >
-            <Radio.Button value="deadwood">Deadwood</Radio.Button>
-            <Radio.Button value="forest_cover">Forest cover</Radio.Button>
+            <Radio.Button value="deadwood">Deadwood cover</Radio.Button>
+            <Radio.Button value="forest_cover">Tree cover</Radio.Button>
           </Radio.Group>
         </div>
       </div>

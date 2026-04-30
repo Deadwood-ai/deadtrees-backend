@@ -119,7 +119,7 @@ const HowItWorks = () => {
               AI Processing & Open Archive
             </h3>
             <p className="text-lg text-gray-600">
-              Our models automatically detect deadwood and forest cover in your uploaded imagery through semantic segmentation. The results are aggregated into an analysis-ready training database, freely accessible for researchers worldwide.
+              Our models automatically detect deadwood cover and tree cover in your uploaded imagery through semantic segmentation. The results are aggregated into an analysis-ready training database, freely accessible for researchers worldwide.
             </p>
           </div>
           <div className="-mx-4 md:mx-0 relative z-10">

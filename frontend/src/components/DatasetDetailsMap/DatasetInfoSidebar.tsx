@@ -90,8 +90,8 @@ const assessmentConfig = {
 };
 
 const tooltips = {
-  forestCover: "Quality of the AI forest cover segmentation. Great = highly accurate boundaries.",
-  deadwood: "Quality of the AI deadwood detection. Great = dead trees accurately identified.",
+  forestCover: "Quality of the AI tree cover segmentation. Great = highly accurate boundaries.",
+  deadwood: "Quality of the AI deadwood cover detection. Great = dead trees accurately identified.",
   finalAssessment: "Overall quality assessment. Ready = suitable for analysis, Fixable = has correctable issues, Excluded = not suitable.",
 };
 
@@ -145,10 +145,10 @@ const AuditSection = ({ audit }: AuditSectionProps) => {
 
       {/* Content rows */}
       <div className="p-5 space-y-3">
-        <InfoRow label="Forest Cover Prediction" tooltip={tooltips.forestCover}>
+        <InfoRow label="Tree cover prediction" tooltip={tooltips.forestCover}>
           <QualityValue quality={audit.forest_cover_quality} />
         </InfoRow>
-        <InfoRow label="Deadwood Prediction" tooltip={tooltips.deadwood}>
+        <InfoRow label="Deadwood cover prediction" tooltip={tooltips.deadwood}>
           <QualityValue quality={audit.deadwood_quality} />
         </InfoRow>
         <InfoRow label="Final Assessment" tooltip={tooltips.finalAssessment}>

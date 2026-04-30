@@ -173,7 +173,7 @@ const GetInContact = () => {
 							Contribute aerial imagery
 						</p>
 						<p className="m-0 mt-4 max-w-lg text-base leading-relaxed text-gray-500">
-							{`Upload high-resolution (<10cm) orthophotos and get automatic deadwood detection, proper attribution, and full database access. `}
+								{`Upload high-resolution (<10cm) orthophotos and get automatic deadwood cover detection, proper attribution, and full database access. `}
 							<em>Labels are optional</em> — our AI handles the rest.
 						</p>
 						<div className="mt-8 flex flex-wrap items-center gap-4">

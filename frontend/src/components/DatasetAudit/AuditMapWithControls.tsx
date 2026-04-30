@@ -219,24 +219,24 @@ const AuditMapWithControls = forwardRef<AuditMapWithControlsHandle, AuditMapWith
 									</Tooltip>
 									<div className="flex flex-col gap-1 ml-2">
 										{pendingDeadwood > 0 && (
-											<Tooltip title="Click to show pending deadwood edits">
+												<Tooltip title="Click to show pending deadwood cover edits">
 												<div
 													className="flex items-center gap-1.5 text-[10px] text-gray-600 cursor-pointer hover:text-orange-600"
 													onClick={() => handleFlashPending("deadwood")}
 												>
 													<span className="h-2 w-2 rounded-sm" style={{ backgroundColor: mapColors.deadwood.fill }} />
-													<span>{pendingDeadwood} deadwood</span>
+														<span>{pendingDeadwood} deadwood cover</span>
 												</div>
 											</Tooltip>
 										)}
 										{pendingForestCover > 0 && (
-											<Tooltip title="Click to show pending forest cover edits">
+												<Tooltip title="Click to show pending tree cover edits">
 												<div
 													className="flex items-center gap-1.5 text-[10px] text-gray-600 cursor-pointer hover:text-green-600"
 													onClick={() => handleFlashPending("forest_cover")}
 												>
 													<span className="h-2 w-2 rounded-sm bg-green-500" />
-													<span>{pendingForestCover} forest cover</span>
+														<span>{pendingForestCover} tree cover</span>
 												</div>
 											</Tooltip>
 										)}
@@ -329,7 +329,7 @@ const AuditMapWithControls = forwardRef<AuditMapWithControlsHandle, AuditMapWith
 						onSave={editing.handleSaveEdits}
 						onCancel={editing.handleCancelEditing}
 						position="top-right"
-						title={`Editing ${editingLayerType === "deadwood" ? "Deadwood" : "Forest Cover"}`}
+							title={`Editing ${editingLayerType === "deadwood" ? "deadwood cover" : "tree cover"}`}
 					/>
 				)}
 

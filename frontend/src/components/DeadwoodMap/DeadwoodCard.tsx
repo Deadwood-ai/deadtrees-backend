@@ -47,18 +47,18 @@ const DeadwoodCard = ({
     <div className="flex w-[300px] flex-col rounded-lg bg-white px-4 py-4 shadow-lg">
       {/* Header */}
       <div className="mb-4">
-        <h3 className="m-0 text-base font-semibold text-gray-700">Tree & Standing Deadwood Cover</h3>
+        <h3 className="m-0 text-base font-semibold text-gray-700">Tree and deadwood cover [%]</h3>
         <span className="text-[10px] text-gray-400">Fractional cover maps • Sentinel-2</span>
       </div>
 
       {/* Legend Section */}
       <div className="mb-1 flex flex-col gap-2">
         <LegendItem
-          label="Tree Cover"
+          label="Tree cover [%]"
           gradientClass="bg-gradient-to-r from-green-100/50 via-green-400/60 to-green-600/80"
         />
         <LegendItem
-          label="Deadwood Cover"
+          label="Deadwood cover [%]"
           gradientClass="bg-gradient-to-r from-red-100/50 via-red-400/60 to-red-500/80"
         />
       </div>
@@ -93,11 +93,11 @@ const DeadwoodCard = ({
         {/* Layer Toggles */}
         <div className="border-t border-gray-100" />
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-gray-500">Tree Cover</span>
+          <span className="text-[11px] text-gray-500">Tree cover [%]</span>
           <Switch size="small" checked={showForest} onChange={(checked) => setShowForest(checked)} />
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-gray-500">Deadwood Cover</span>
+          <span className="text-[11px] text-gray-500">Deadwood cover [%]</span>
           <Switch size="small" checked={showDeadwood} onChange={(checked) => setShowDeadwood(checked)} />
         </div>
 

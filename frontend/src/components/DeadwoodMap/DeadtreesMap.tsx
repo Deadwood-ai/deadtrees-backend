@@ -478,14 +478,14 @@ const DeadtreesMap = () => {
           if (showForest) {
             layerParts.push(`<span style="display: flex; align-items: center; gap: 4px;">
                 <span style="width: 8px; height: 8px; border-radius: 2px; background: ${mapColors.forest.fill};"></span>
-                <span style="color: ${palette.neutral[700]};">Tree</span>
+                <span style="color: ${palette.neutral[700]};">Tree cover [%]</span>
                 <span style="font-weight: 600;">${forestPct}%</span>
               </span>`);
           }
           if (showDeadwood) {
             layerParts.push(`<span style="display: flex; align-items: center; gap: 4px;">
                 <span style="width: 8px; height: 8px; border-radius: 2px; background: ${mapColors.deadwood.fill};"></span>
-                <span style="color: ${palette.neutral[700]};">Deadwood</span>
+                <span style="color: ${palette.neutral[700]};">Deadwood cover [%]</span>
                 <span style="font-weight: 600;">${deadwoodPct}%</span>
               </span>`);
           }
@@ -1380,7 +1380,7 @@ const DeadtreesMap = () => {
         </div>
 
         {/* Top Right - Layer Controls (desktop) */}
-        <div className="absolute right-4 top-24 z-50 hidden md:block">
+        <div className="fixed right-40 top-24 z-50 hidden md:block">
           <LayerControlPanel
             mapStyle={DeadwoodMapStyle}
             onMapStyleChange={handleMapStyleChange}
