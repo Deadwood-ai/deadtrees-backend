@@ -251,7 +251,8 @@ Dead Trees worktrees bootstrap themselves automatically.
 
 The setup script auto-detects the primary checkout from `git worktree list`,
 so a Codex-created worktree will reuse the main checkout for shared `assets`,
-`data`, and `.local/ssh` without hardcoding a machine-specific path.
+`data`, `.local/ssh`, local `.codex` project config, and ignored local
+`docs/ops` playbooks without hardcoding a machine-specific path.
 
 ## Project structure
 
