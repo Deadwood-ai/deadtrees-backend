@@ -19,6 +19,7 @@ import { useDatasetEditing } from "../../hooks/useDatasetEditing";
 import { mapColors } from "../../theme/mapColors";
 import { MAP_FLOATING_TOP_CLASS } from "../../theme/mapLayout";
 import { trackAppEvent } from "../../utils/analytics";
+import { hasForestCoverPredictionOutput } from "../../utils/predictionAvailability";
 
 interface AuditMapWithControlsProps {
 	dataset: IDataset;
@@ -74,7 +75,7 @@ const AuditMapWithControls = forwardRef<AuditMapWithControlsHandle, AuditMapWith
 		});
 
 		const hasDeadwood = !!deadwood.data?.id;
-		const hasForestCover = !!forestCover.data?.id && !!dataset.is_forest_cover_done;
+		const hasForestCover = !!forestCover.data?.id && hasForestCoverPredictionOutput(dataset);
 
 		// Editing hook for polygon corrections
 		const editing = useDatasetEditing({ datasetId: dataset?.id, user });

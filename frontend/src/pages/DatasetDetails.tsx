@@ -17,6 +17,7 @@ import { useDatasetEditing } from "../hooks/useDatasetEditing";
 import { useCanAudit } from "../hooks/useUserPrivileges";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useAnalytics } from "../hooks/useAnalytics";
+import { hasForestCoverPredictionOutput } from "../utils/predictionAvailability";
 
 import DatasetLayerControlPanel from "../components/DatasetDetailsMap/DatasetLayerControlPanel";
 import EditingSidebar from "../components/DatasetDetailsMap/EditingSidebar";
@@ -178,6 +179,7 @@ export default function DatasetDetails() {
   }
 
   const { isEditing, editingLayerType, editor, ai, hasDeadwood, hasForestCover, refreshKey } = editing;
+  const hasDisplayableForestCover = hasForestCover && hasForestCoverPredictionOutput(dataset);
   const SIDEBAR_LEFT_PX = 16;
   const SIDEBAR_WIDTH_PX = 384;
   const SIDEBAR_BUTTON_TOP_PX = 112;
@@ -302,7 +304,7 @@ export default function DatasetDetails() {
               setShowDroneImagery={setShowDroneImagery}
               showAOI={layerControl.showAOI}
               setShowAOI={setShowAOI}
-              hasForestCover={hasForestCover && !!dataset.is_forest_cover_done}
+              hasForestCover={hasDisplayableForestCover}
               hasDeadwood={hasDeadwood}
               hasAOI={true}
               forestCoverQuality={auditInfo?.forest_cover_quality as "great" | "sentinel_ok" | "bad" | undefined}
@@ -418,7 +420,7 @@ export default function DatasetDetails() {
             setShowDroneImagery={setShowDroneImagery}
             showAOI={layerControl.showAOI}
             setShowAOI={setShowAOI}
-            hasForestCover={hasForestCover && !!dataset.is_forest_cover_done}
+            hasForestCover={hasDisplayableForestCover}
             hasDeadwood={hasDeadwood}
             hasAOI={true}
             forestCoverQuality={auditInfo?.forest_cover_quality as "great" | "sentinel_ok" | "bad" | undefined}

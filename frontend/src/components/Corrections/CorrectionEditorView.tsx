@@ -27,6 +27,7 @@ import { createDeadwoodVectorLayer, createForestCoverVectorLayer } from "../Data
 import { useDatasetLabelTypes } from "../../hooks/useDatasetLabelTypes";
 import { useDatasetDetailsMap } from "../../hooks/useDatasetDetailsMapProvider";
 import { createOpenFreeMapLibertyLayerGroup, createStandardMapControls } from "../../utils/basemaps";
+import { hasForestCoverPredictionOutput } from "../../utils/predictionAvailability";
 
 interface Props {
   dataset: IDataset;
@@ -72,6 +73,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
     predictionLabel?.id,
     editingLayerType
   );
+  const hasDisplayableForestCover = hasForestCoverPredictionOutput(dataset);
 
   // Save mutations
   const saveCorrections = useSaveCorrections();
@@ -115,7 +117,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       ? createDeadwoodVectorLayer(deadwood.data.id, { showCorrectionStyling: true })
       : undefined;
     const forestCoverVectorLayer =
-      dataset.is_forest_cover_done && forestCover.data?.id
+      hasDisplayableForestCover && forestCover.data?.id
         ? createForestCoverVectorLayer(forestCover.data.id, { showCorrectionStyling: true })
         : undefined;
 
@@ -187,7 +189,7 @@ export default function CorrectionEditorView({ dataset, initialLayerType, onClos
       deadwoodLayerRef.current = null;
       forestCoverLayerRef.current = null;
     };
-  }, [dataset.cog_path, dataset.is_forest_cover_done, deadwood.data?.id, forestCover.data?.id]);
+  }, [dataset.cog_path, hasDisplayableForestCover, deadwood.data?.id, forestCover.data?.id]);
 
   // Start editing
   const handleStartEditing = useCallback(async () => {
