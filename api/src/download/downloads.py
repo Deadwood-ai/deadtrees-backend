@@ -512,6 +512,8 @@ def filter_exportable_dataset_labels(
 	"""Keep only exportable label sources, and for model predictions only the preferred model version."""
 	result = []
 	for label in labels:
+		if not label.is_active:
+			continue
 		if label.label_source not in EXPORTABLE_LABEL_SOURCES:
 			continue
 		if label.label_source == LabelSourceEnum.model_prediction:

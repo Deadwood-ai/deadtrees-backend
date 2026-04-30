@@ -5,10 +5,9 @@ import rasterio
 from shared.logger import logger
 from shared.logging import LogContext, LogCategory
 from shared.models import COMBINED_MODEL_CHECKPOINT_NAME, COMBINED_MODEL_CONFIG, COMBINED_MODEL_MODULE, LabelDataEnum
-from shared.labels import delete_model_prediction_labels
 
 from ..exceptions import ProcessingError
-from ..utils.prediction_labels import replace_model_prediction_label
+from ..utils.prediction_labels import create_versioned_model_prediction_label
 from ..utils.segmentation import polygons_to_multipolygon_geojson, reproject_polygons
 from ..utils.geometry_validation import validate_and_fix_polygons
 from .inference import CombinedInference
@@ -74,12 +73,6 @@ def _save_label(polygons, label_data, src_crs, dataset_id, user_id, token, model
 
     if len(polygons) == 0:
         logger.warning(f'No {label_type} polygons detected', log_ctx)
-        delete_model_prediction_labels(
-            dataset_id=dataset_id,
-            label_data=label_data,
-            token=token,
-            model_config=model_config,
-        )
         return
 
     polygons = reproject_polygons(polygons, src_crs, 'EPSG:4326')
@@ -87,16 +80,10 @@ def _save_label(polygons, label_data, src_crs, dataset_id, user_id, token, model
 
     if len(polygons) == 0:
         logger.warning(f'No valid {label_type} polygons after geometry validation', log_ctx)
-        delete_model_prediction_labels(
-            dataset_id=dataset_id,
-            label_data=label_data,
-            token=token,
-            model_config=model_config,
-        )
         return
 
     geojson = polygons_to_multipolygon_geojson(polygons)
-    label = replace_model_prediction_label(
+    label = create_versioned_model_prediction_label(
         dataset_id=dataset_id,
         user_id=user_id,
         label_data=label_data,

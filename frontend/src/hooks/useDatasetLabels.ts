@@ -60,7 +60,8 @@ export function useDatasetLabels({
       const query = supabase
         .from(Settings.LABELS_TABLE)
         .select("*")
-        .eq("dataset_id", datasetId);
+        .eq("dataset_id", datasetId)
+        .eq("is_active", true);
 
       if (labelType) {
         query.eq("label_data", labelType);

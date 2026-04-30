@@ -23,18 +23,19 @@ function configMatches(
 }
 
 export function selectPreferredModelLabel<
-  T extends Pick<ILabel, "label_source" | "model_config">,
+  T extends Pick<ILabel, "label_source" | "model_config" | "is_active">,
 >(
   labels: T[],
   labelType: ILabelData,
   preferences?: ReadonlyMap<string, ModelConfig>,
 ): T | null {
-  if (labels.length === 0) return null;
-  if (labels.length === 1) return labels[0];
+  const activeLabels = labels.filter((label) => label.is_active !== false);
+  if (activeLabels.length === 0) return null;
+  if (activeLabels.length === 1) return activeLabels[0];
 
   const preferredConfig =
     preferences?.get(labelType) ?? DEFAULT_MODEL_PREFERENCES[labelType];
-  const preferred = labels.find(
+  const preferred = activeLabels.find(
     (label) =>
       label.label_source === ILabelSource.MODEL_PREDICTION &&
       configMatches(label.model_config, preferredConfig),
@@ -43,8 +44,8 @@ export function selectPreferredModelLabel<
   if (preferred) return preferred;
 
   return (
-    labels.find(
+    activeLabels.find(
       (label) => label.label_source === ILabelSource.MODEL_PREDICTION,
-    ) ?? labels[0]
+    ) ?? activeLabels[0]
   );
 }

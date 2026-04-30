@@ -516,6 +516,10 @@ class Label(BaseModel):
 		validation_alias=AliasChoices('model_config', 'model_metadata'),
 		serialization_alias='model_config',
 	)
+	is_active: bool = True
+	parent_label_id: Optional[int] = None
+	reference_patch_id: Optional[int] = None
+	version: int = 1
 	created_at: Optional[datetime] = None
 	updated_at: Optional[datetime] = None
 
