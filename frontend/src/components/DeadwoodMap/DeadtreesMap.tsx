@@ -38,6 +38,7 @@ import getPixelValueOfCoordinate from "../../utils/getPixelValueOfCoordinate";
 import {
   getDeadwoodCOGUrl,
   getForestCOGUrl,
+  type MapModelVersion,
 } from "../../utils/getDeadwoodCOGUrl";
 import {
   createOpenFreeMapLibertyLayerGroup,
@@ -51,6 +52,7 @@ import YearImagerySelector from "./YearImagerySelector";
 import PolygonStatsModal from "./PolygonStatsModal";
 import { useDatasetMap } from "../../hooks/useDatasetMapProvider";
 import { useAuth } from "../../hooks/useAuthProvider";
+import { useCanAudit } from "../../hooks/useUserPrivileges";
 import { useMapFlags, useCreateMapFlag } from "../../hooks/useMapFlags";
 import { useWaybackItemsDebounced } from "../../hooks/useWaybackItems";
 import { usePolygonAnalysis } from "../../hooks/usePolygonAnalysis";
@@ -121,52 +123,55 @@ interface KompasTracker {
 }
 
 // Helper to create GeoTIFF source for deadwood
-const createDeadwoodSource = (year: string) => {
+const createDeadwoodSource = (year: string, version: MapModelVersion) => {
   return new GeoTIFF({
-    sources: [{ url: getDeadwoodCOGUrl(year), bands: [1], min: 0, max: 255 }],
+    sources: [{ url: getDeadwoodCOGUrl(year, version), bands: [1], min: 0, max: 255 }],
     normalize: true,
     interpolate: false,
   });
 };
 
 // Helper to create GeoTIFF source for forest
-const createForestSource = (year: string) => {
+const createForestSource = (year: string, version: MapModelVersion) => {
   return new GeoTIFF({
-    sources: [{ url: getForestCOGUrl(year), bands: [1], min: 0, max: 255 }],
+    sources: [{ url: getForestCOGUrl(year, version), bands: [1], min: 0, max: 255 }],
     normalize: true,
     interpolate: false,
   });
 };
 
-// Source caches - persist across renders to reuse already-loaded sources
+// Source caches - keyed by `${version}-${year}` to persist across renders
 const deadwoodSourceCache: Record<string, GeoTIFF> = {};
 const forestSourceCache: Record<string, GeoTIFF> = {};
 
 // Get or create cached deadwood source
-const getCachedDeadwoodSource = (year: string): GeoTIFF => {
-  if (!deadwoodSourceCache[year]) {
-    console.debug(`[Cache] Creating new deadwood source for ${year}`);
-    deadwoodSourceCache[year] = createDeadwoodSource(year);
+const getCachedDeadwoodSource = (year: string, version: MapModelVersion): GeoTIFF => {
+  const key = `${version}-${year}`;
+  if (!deadwoodSourceCache[key]) {
+    console.debug(`[Cache] Creating new deadwood source for ${version}/${year}`);
+    deadwoodSourceCache[key] = createDeadwoodSource(year, version);
   } else {
-    console.debug(`[Cache] Reusing cached deadwood source for ${year}`);
+    console.debug(`[Cache] Reusing cached deadwood source for ${version}/${year}`);
   }
-  return deadwoodSourceCache[year];
+  return deadwoodSourceCache[key];
 };
 
 // Get or create cached forest source
-const getCachedForestSource = (year: string): GeoTIFF => {
-  if (!forestSourceCache[year]) {
-    console.debug(`[Cache] Creating new forest source for ${year}`);
-    forestSourceCache[year] = createForestSource(year);
+const getCachedForestSource = (year: string, version: MapModelVersion): GeoTIFF => {
+  const key = `${version}-${year}`;
+  if (!forestSourceCache[key]) {
+    console.debug(`[Cache] Creating new forest source for ${version}/${year}`);
+    forestSourceCache[key] = createForestSource(year, version);
   } else {
-    console.debug(`[Cache] Reusing cached forest source for ${year}`);
+    console.debug(`[Cache] Reusing cached forest source for ${version}/${year}`);
   }
-  return forestSourceCache[year];
+  return forestSourceCache[key];
 };
 
 const DeadtreesMap = () => {
   const [map, setMap] = useState<Map | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>("2025");
+  const [modelVersion, setModelVersion] = useState<MapModelVersion>("v2");
   const [bounds, setBounds] = useState<number[]>([]);
   const [sliderValue, setSliderValue] = useState<number>(1);
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -223,8 +228,13 @@ const DeadtreesMap = () => {
   const [deadwoodWarningModalOpen, setDeadwoodWarningModalOpen] =
     useState(false);
 
+  // Auth privilege — needed before polygonAnalysis so effectiveModelVersion is available
+  const { canAudit } = useCanAudit();
+  // Non-auditors are locked to v1; auditors can freely switch
+  const effectiveModelVersion: MapModelVersion = canAudit ? modelVersion : "v1";
+
   // Polygon analysis (drawing + stats)
-  const polygonAnalysis = usePolygonAnalysis(mapRef);
+  const polygonAnalysis = usePolygonAnalysis(mapRef, effectiveModelVersion);
 
   // Wayback imagery state - using debounced location-based query
   // Default to a recent Wayback release (31144 = 2024) for immediate satellite display
@@ -434,11 +444,11 @@ const DeadtreesMap = () => {
         const [deadwoodResult, forestResult] = await Promise.all([
           getPixelValueOfCoordinate({
             coordinates: event.coordinate,
-            cogUrl: getDeadwoodCOGUrl(year),
+            cogUrl: getDeadwoodCOGUrl(year, effectiveModelVersion),
           }),
           getPixelValueOfCoordinate({
             coordinates: event.coordinate,
-            cogUrl: getForestCOGUrl(year),
+            cogUrl: getForestCOGUrl(year, effectiveModelVersion),
           }),
         ]);
 
@@ -520,7 +530,7 @@ const DeadtreesMap = () => {
         setClickedValues({ forestPct, deadwoodPct });
       }
     },
-    [showDeadwood, showForest],
+    [showDeadwood, showForest, effectiveModelVersion],
   );
 
   useEffect(() => {
@@ -544,7 +554,7 @@ const DeadtreesMap = () => {
       // Create only 2 layers - one for forest, one for deadwood (for current year)
       // Forest layer: Light green → Dark green gradient based on cover intensity
       const forestLayer = new TileLayerWebGL({
-        source: getCachedForestSource(selectedYear),
+        source: getCachedForestSource(selectedYear, effectiveModelVersion),
         className: "forest-layer",
         style: {
           color: [
@@ -574,7 +584,7 @@ const DeadtreesMap = () => {
       // Deadwood layer: selective yellow spectrum with enhanced visibility for high values
       // Low values are more transparent, high values are more visible
       const deadwoodLayer = new TileLayerWebGL({
-        source: getCachedDeadwoodSource(selectedYear),
+        source: getCachedDeadwoodSource(selectedYear, effectiveModelVersion),
         className: "deadwood-layer",
         visible: true, // Both layers visible by default
         style: {
@@ -776,19 +786,19 @@ const DeadtreesMap = () => {
         }
       };
     }
-  }, [selectedYear, isDrawingFlag, polygonAnalysis.isDrawing, handleClick]);
+  }, [selectedYear, effectiveModelVersion, isDrawingFlag, polygonAnalysis.isDrawing, handleClick]);
 
-  // Update sources when year changes (use cached sources for instant switching)
+  // Update sources when year or model version changes (use cached sources for instant switching)
   useEffect(() => {
     if (forestLayerRef.current && deadwoodLayerRef.current) {
       // Use cached sources - instant if already loaded
-      forestLayerRef.current.setSource(getCachedForestSource(selectedYear));
-      deadwoodLayerRef.current.setSource(getCachedDeadwoodSource(selectedYear));
+      forestLayerRef.current.setSource(getCachedForestSource(selectedYear, effectiveModelVersion));
+      deadwoodLayerRef.current.setSource(getCachedDeadwoodSource(selectedYear, effectiveModelVersion));
       // Maintain visibility state after source update
       forestLayerRef.current.setVisible(showForest);
       deadwoodLayerRef.current.setVisible(showDeadwood);
     }
-  }, [selectedYear, showForest, showDeadwood]);
+  }, [selectedYear, effectiveModelVersion, showForest, showDeadwood]);
 
   // Initialize Wayback style and auto-select best imagery when items first load
   useEffect(() => {
@@ -1405,6 +1415,8 @@ const DeadtreesMap = () => {
             flagsCount={mapFlags.length}
             clickedValues={clickedValues}
             variant="floating-card"
+            modelVersion={modelVersion}
+            onModelVersionChange={canAudit ? setModelVersion : undefined}
           />
         </div>
 
@@ -1574,6 +1586,8 @@ const DeadtreesMap = () => {
               flagsCount={mapFlags.length}
               clickedValues={clickedValues}
               variant="drawer-sheet"
+              modelVersion={modelVersion}
+              onModelVersionChange={canAudit ? setModelVersion : undefined}
             />
           </div>
         </Drawer>
